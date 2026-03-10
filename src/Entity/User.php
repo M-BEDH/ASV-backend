@@ -6,11 +6,13 @@ use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: 'users')]
-class User
+class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\Column(type: 'string', length: 36)]
@@ -24,6 +26,13 @@ class User
 
     #[ORM\Column(length: 20)]
     private ?string $role = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $password = null;
+
+    #[ORM\ManyToOne(targetEntity: Clinic::class, inversedBy: 'users')]
+    #[ORM\JoinColumn(name: 'clinic_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?Clinic $clinic = null;
 
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private ?\DateTimeImmutable $createdAt = null;
@@ -55,8 +64,43 @@ class User
         return $this->name ?? $this->email ?? ($this->id ?? 'User');
     }
 
+    // --- UserInterface ---
+
+    public function getUserIdentifier(): string
+    {
+        return $this->email ?? '';
+    }
+
+    public function getRoles(): array
+    {
+        // assistant has same rights as veterinaire
+        $symfonyRole = match ($this->role) {
+            'veterinaire', 'assistant' => 'ROLE_VETERINAIRE',
+            'client'                   => 'ROLE_CLIENT',
+            default                    => 'ROLE_USER',
+        };
+
+        return [$symfonyRole, 'ROLE_USER'];
+    }
+
+    public function eraseCredentials(): void {}
+
+    // --- PasswordAuthenticatedUserInterface ---
+
+    public function getPassword(): ?string
+    {
+        return $this->password;
+    }
+
+    public function setPassword(string $password): static
+    {
+        $this->password = $password;
+        return $this;
+    }
+
+    // --- Getters / Setters ---
+
     public function getId(): ?string { return $this->id; }
-    public function setId(string $id): static { $this->id = $id; return $this; }
 
     public function getEmail(): ?string { return $this->email; }
     public function setEmail(string $email): static { $this->email = $email; return $this; }
@@ -67,8 +111,10 @@ class User
     public function getRole(): ?string { return $this->role; }
     public function setRole(string $role): static { $this->role = $role; return $this; }
 
+    public function getClinic(): ?Clinic { return $this->clinic; }
+    public function setClinic(?Clinic $clinic): static { $this->clinic = $clinic; return $this; }
+
     public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static { $this->createdAt = $createdAt; return $this; }
 
     /** @return Collection<int, Animal> */
     public function getCreatedAnimals(): Collection { return $this->createdAnimals; }
