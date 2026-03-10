@@ -25,7 +25,7 @@ final class MedicalConsultationApiController extends AbstractController
 
         $consultations = $clinic
             ? $repo->findBy(['clinic' => $clinic], ['dateConsultation' => 'DESC'])
-            : [];
+            : $repo->findBy(['clinic' => null]);
 
         return $this->json(array_map(fn($c) => $this->serialize($c), $consultations));
     }

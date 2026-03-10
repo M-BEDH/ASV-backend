@@ -23,7 +23,7 @@ final class OwnerApiController extends AbstractController
 
         $owners = $clinic
             ? $repo->findBy(['clinic' => $clinic])
-            : [];
+            : $repo->findBy(['clinic' => null]);
 
         return $this->json(array_map(fn($o) => $this->serialize($o), $owners));
     }

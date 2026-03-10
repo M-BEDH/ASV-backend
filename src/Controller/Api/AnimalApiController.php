@@ -24,7 +24,7 @@ final class AnimalApiController extends AbstractController
 
         $animals = $clinic
             ? $repo->findBy(['clinic' => $clinic])
-            : [];
+            : $repo->findBy(['clinic' => null]);
 
         return $this->json(array_map(fn($a) => $this->serialize($a), $animals));
     }
