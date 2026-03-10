@@ -3,6 +3,7 @@
 namespace App\Controller\Api;
 
 use App\Entity\MedicalConsultation;
+use App\Entity\User;
 use App\Repository\AnimalRepository;
 use App\Repository\MedicalConsultationRepository;
 use App\Repository\UserRepository;
@@ -18,14 +19,31 @@ final class MedicalConsultationApiController extends AbstractController
     #[Route('', methods: ['GET'])]
     public function index(MedicalConsultationRepository $repo): JsonResponse
     {
-        $consultations = array_map(fn($c) => $this->serialize($c), $repo->findAll());
+        /** @var User $me */
+        $me = $this->getUser();
+        $clinic = $me->getClinic();
 
-        return $this->json($consultations);
+        $consultations = $clinic
+            ? $repo->findBy(['clinic' => $clinic], ['dateConsultation' => 'DESC'])
+            : [];
+
+        return $this->json(array_map(fn($c) => $this->serialize($c), $consultations));
     }
 
     #[Route('/{id}', methods: ['GET'])]
-    public function show(MedicalConsultation $consultation): JsonResponse
+    public function show(string $id, MedicalConsultationRepository $repo): JsonResponse
     {
+        $consultation = $repo->find($id);
+        if (!$consultation) {
+            return $this->json(['error' => 'Consultation introuvable.'], 404);
+        }
+
+        /** @var User $me */
+        $me = $this->getUser();
+        if ($consultation->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         return $this->json($this->serialize($consultation));
     }
 
@@ -36,6 +54,9 @@ final class MedicalConsultationApiController extends AbstractController
         AnimalRepository $animalRepo,
         UserRepository $userRepo,
     ): JsonResponse {
+        /** @var User $me */
+        $me = $this->getUser();
+
         $data = json_decode($request->getContent(), true);
 
         if (empty($data['animalId']) || empty($data['dateConsultation']) || empty($data['motif'])) {
@@ -53,13 +74,18 @@ final class MedicalConsultationApiController extends AbstractController
         $consultation->setDateConsultation(new \DateTime($data['dateConsultation']));
         $consultation->setCompteRendu($data['compteRendu'] ?? null);
         $consultation->setTraitements($data['traitements'] ?? null);
+        $consultation->setClinic($me->getClinic());
 
-        if (!empty($data['veterinaireId'])) {
-            $vet = $userRepo->find($data['veterinaireId']);
+        // Default to the authenticated user as veterinaire; allow override
+        $vetId = $data['veterinaireId'] ?? null;
+        if ($vetId) {
+            $vet = $userRepo->find($vetId);
             if (!$vet) {
                 return $this->json(['error' => 'Vétérinaire introuvable.'], 404);
             }
             $consultation->setVeterinaire($vet);
+        } else {
+            $consultation->setVeterinaire($me);
         }
 
         $em->persist($consultation);
@@ -70,26 +96,32 @@ final class MedicalConsultationApiController extends AbstractController
 
     #[Route('/{id}', methods: ['PUT'])]
     public function update(
+        string $id,
         Request $request,
-        MedicalConsultation $consultation,
+        MedicalConsultationRepository $repo,
         EntityManagerInterface $em,
         AnimalRepository $animalRepo,
         UserRepository $userRepo,
     ): JsonResponse {
+        $consultation = $repo->find($id);
+        if (!$consultation) {
+            return $this->json(['error' => 'Consultation introuvable.'], 404);
+        }
+
+        /** @var User $me */
+        $me = $this->getUser();
+        if ($consultation->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         $data = json_decode($request->getContent(), true);
 
-        if (isset($data['motif'])) {
-            $consultation->setMotif($data['motif']);
-        }
+        if (isset($data['motif'])) { $consultation->setMotif($data['motif']); }
         if (isset($data['dateConsultation'])) {
             $consultation->setDateConsultation(new \DateTime($data['dateConsultation']));
         }
-        if (array_key_exists('compteRendu', $data)) {
-            $consultation->setCompteRendu($data['compteRendu']);
-        }
-        if (array_key_exists('traitements', $data)) {
-            $consultation->setTraitements($data['traitements']);
-        }
+        if (array_key_exists('compteRendu', $data)) { $consultation->setCompteRendu($data['compteRendu']); }
+        if (array_key_exists('traitements', $data)) { $consultation->setTraitements($data['traitements']); }
 
         if (array_key_exists('animalId', $data)) {
             if ($data['animalId'] === null) {
@@ -121,8 +153,19 @@ final class MedicalConsultationApiController extends AbstractController
     }
 
     #[Route('/{id}', methods: ['DELETE'])]
-    public function delete(MedicalConsultation $consultation, EntityManagerInterface $em): JsonResponse
+    public function delete(string $id, MedicalConsultationRepository $repo, EntityManagerInterface $em): JsonResponse
     {
+        $consultation = $repo->find($id);
+        if (!$consultation) {
+            return $this->json(['error' => 'Consultation introuvable.'], 404);
+        }
+
+        /** @var User $me */
+        $me = $this->getUser();
+        if ($consultation->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         $em->remove($consultation);
         $em->flush();
 
@@ -137,6 +180,7 @@ final class MedicalConsultationApiController extends AbstractController
             'motif'            => $c->getMotif(),
             'compteRendu'      => $c->getCompteRendu(),
             'traitements'      => $c->getTraitements(),
+            'clinicId'         => $c->getClinic()?->getId(),
             'animal'           => $c->getAnimal() ? [
                 'id'     => $c->getAnimal()->getId(),
                 'nom'    => $c->getAnimal()->getNom(),

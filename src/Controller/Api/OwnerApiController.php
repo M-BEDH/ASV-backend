@@ -3,8 +3,8 @@
 namespace App\Controller\Api;
 
 use App\Entity\Owner;
+use App\Entity\User;
 use App\Repository\OwnerRepository;
-use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -17,14 +17,31 @@ final class OwnerApiController extends AbstractController
     #[Route('', methods: ['GET'])]
     public function index(OwnerRepository $repo): JsonResponse
     {
-        $owners = array_map(fn($o) => $this->serialize($o), $repo->findAll());
+        /** @var User $me */
+        $me = $this->getUser();
+        $clinic = $me->getClinic();
 
-        return $this->json($owners);
+        $owners = $clinic
+            ? $repo->findBy(['clinic' => $clinic])
+            : [];
+
+        return $this->json(array_map(fn($o) => $this->serialize($o), $owners));
     }
 
     #[Route('/{id}', methods: ['GET'])]
-    public function show(Owner $owner): JsonResponse
+    public function show(string $id, OwnerRepository $repo): JsonResponse
     {
+        $owner = $repo->find($id);
+        if (!$owner) {
+            return $this->json(['error' => 'Propriétaire introuvable.'], 404);
+        }
+
+        /** @var User $me */
+        $me = $this->getUser();
+        if ($owner->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         return $this->json($this->serialize($owner));
     }
 
@@ -32,8 +49,10 @@ final class OwnerApiController extends AbstractController
     public function create(
         Request $request,
         EntityManagerInterface $em,
-        UserRepository $userRepo,
     ): JsonResponse {
+        /** @var User $me */
+        $me = $this->getUser();
+
         $data = json_decode($request->getContent(), true);
 
         if (empty($data['nom']) || empty($data['prenom'])) {
@@ -46,22 +65,8 @@ final class OwnerApiController extends AbstractController
         $owner->setAdresse($data['adresse'] ?? null);
         $owner->setTelephone($data['telephone'] ?? null);
         $owner->setEmail($data['email'] ?? null);
-
-        if (!empty($data['userId'])) {
-            $user = $userRepo->find($data['userId']);
-            if (!$user) {
-                return $this->json(['error' => 'Utilisateur introuvable.'], 404);
-            }
-            $owner->setUser($user);
-        }
-
-        if (!empty($data['createdById'])) {
-            $user = $userRepo->find($data['createdById']);
-            if (!$user) {
-                return $this->json(['error' => 'Utilisateur créateur introuvable.'], 404);
-            }
-            $owner->setCreatedBy($user);
-        }
+        $owner->setCreatedBy($me);
+        $owner->setClinic($me->getClinic());
 
         $em->persist($owner);
         $em->flush();
@@ -71,40 +76,29 @@ final class OwnerApiController extends AbstractController
 
     #[Route('/{id}', methods: ['PUT'])]
     public function update(
+        string $id,
         Request $request,
-        Owner $owner,
+        OwnerRepository $repo,
         EntityManagerInterface $em,
-        UserRepository $userRepo,
     ): JsonResponse {
+        $owner = $repo->find($id);
+        if (!$owner) {
+            return $this->json(['error' => 'Propriétaire introuvable.'], 404);
+        }
+
+        /** @var User $me */
+        $me = $this->getUser();
+        if ($owner->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         $data = json_decode($request->getContent(), true);
 
-        if (isset($data['nom'])) {
-            $owner->setNom($data['nom']);
-        }
-        if (isset($data['prenom'])) {
-            $owner->setPrenom($data['prenom']);
-        }
-        if (array_key_exists('adresse', $data)) {
-            $owner->setAdresse($data['adresse']);
-        }
-        if (array_key_exists('telephone', $data)) {
-            $owner->setTelephone($data['telephone']);
-        }
-        if (array_key_exists('email', $data)) {
-            $owner->setEmail($data['email']);
-        }
-
-        if (array_key_exists('userId', $data)) {
-            if ($data['userId'] === null) {
-                $owner->setUser(null);
-            } else {
-                $user = $userRepo->find($data['userId']);
-                if (!$user) {
-                    return $this->json(['error' => 'Utilisateur introuvable.'], 404);
-                }
-                $owner->setUser($user);
-            }
-        }
+        if (isset($data['nom'])) { $owner->setNom($data['nom']); }
+        if (isset($data['prenom'])) { $owner->setPrenom($data['prenom']); }
+        if (array_key_exists('adresse', $data)) { $owner->setAdresse($data['adresse']); }
+        if (array_key_exists('telephone', $data)) { $owner->setTelephone($data['telephone']); }
+        if (array_key_exists('email', $data)) { $owner->setEmail($data['email']); }
 
         $em->flush();
 
@@ -112,8 +106,19 @@ final class OwnerApiController extends AbstractController
     }
 
     #[Route('/{id}', methods: ['DELETE'])]
-    public function delete(Owner $owner, EntityManagerInterface $em): JsonResponse
+    public function delete(string $id, OwnerRepository $repo, EntityManagerInterface $em): JsonResponse
     {
+        $owner = $repo->find($id);
+        if (!$owner) {
+            return $this->json(['error' => 'Propriétaire introuvable.'], 404);
+        }
+
+        /** @var User $me */
+        $me = $this->getUser();
+        if ($owner->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         $em->remove($owner);
         $em->flush();
 
@@ -129,10 +134,7 @@ final class OwnerApiController extends AbstractController
             'adresse'   => $o->getAdresse(),
             'telephone' => $o->getTelephone(),
             'email'     => $o->getEmail(),
-            'user'      => $o->getUser() ? [
-                'id'   => $o->getUser()->getId(),
-                'name' => $o->getUser()->getName(),
-            ] : null,
+            'clinicId'  => $o->getClinic()?->getId(),
             'createdBy' => $o->getCreatedBy() ? [
                 'id'   => $o->getCreatedBy()->getId(),
                 'name' => $o->getCreatedBy()->getName(),
