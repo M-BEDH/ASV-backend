@@ -25,6 +25,10 @@ class MedicalConsultation
     #[ORM\JoinColumn(name: 'veterinaire_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?User $veterinaire = null;
 
+    #[ORM\ManyToOne(targetEntity: Clinic::class)]
+    #[ORM\JoinColumn(name: 'clinic_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?Clinic $clinic = null;
+
     #[ORM\Column(type: 'text')]
     private ?string $motif = null;
 
@@ -59,6 +63,9 @@ class MedicalConsultation
 
     public function getVeterinaire(): ?User { return $this->veterinaire; }
     public function setVeterinaire(?User $veterinaire): static { $this->veterinaire = $veterinaire; return $this; }
+
+    public function getClinic(): ?Clinic { return $this->clinic; }
+    public function setClinic(?Clinic $clinic): static { $this->clinic = $clinic; return $this; }
 
     public function getMotif(): ?string { return $this->motif; }
     public function setMotif(string $motif): static { $this->motif = $motif; return $this; }

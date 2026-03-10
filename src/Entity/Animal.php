@@ -39,6 +39,10 @@ class Animal
     #[ORM\JoinColumn(name: 'created_by', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?User $createdBy = null;
 
+    #[ORM\ManyToOne(targetEntity: Clinic::class)]
+    #[ORM\JoinColumn(name: 'clinic_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?Clinic $clinic = null;
+
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -80,6 +84,9 @@ class Animal
 
     public function getCreatedBy(): ?User { return $this->createdBy; }
     public function setCreatedBy(?User $createdBy): static { $this->createdBy = $createdBy; return $this; }
+
+    public function getClinic(): ?Clinic { return $this->clinic; }
+    public function setClinic(?Clinic $clinic): static { $this->clinic = $clinic; return $this; }
 
     public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
     public function setCreatedAt(\DateTimeImmutable $createdAt): static { $this->createdAt = $createdAt; return $this; }
