@@ -16,12 +16,20 @@ use Symfony\Component\Routing\Attribute\Route;
 final class AnimalApiController extends AbstractController
 {
     #[Route('', methods: ['GET'])]
-    public function index(AnimalRepository $repo): JsonResponse
+    public function index(AnimalRepository $repo, OwnerRepository $ownerRepo): JsonResponse
     {
         /** @var User $me */
         $me = $this->getUser();
-        $clinic = $me->getClinic();
 
+        if ($me->getRole() === 'client') {
+            $owner = $ownerRepo->findOneBy(['email' => $me->getEmail()]);
+            if (!$owner) {
+                return $this->json([]);
+            }
+            return $this->json(array_map(fn($a) => $this->serialize($a), $owner->getAnimals()->toArray()));
+        }
+
+        $clinic = $me->getClinic();
         $animals = $clinic
             ? $repo->findBy(['clinic' => $clinic])
             : $repo->findBy(['clinic' => null]);
@@ -54,6 +62,10 @@ final class AnimalApiController extends AbstractController
     ): JsonResponse {
         /** @var User $me */
         $me = $this->getUser();
+
+        if ($me->getRole() === 'client') {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
 
         $data = json_decode($request->getContent(), true);
 
@@ -95,13 +107,18 @@ final class AnimalApiController extends AbstractController
         EntityManagerInterface $em,
         OwnerRepository $ownerRepo,
     ): JsonResponse {
+        /** @var User $me */
+        $me = $this->getUser();
+
+        if ($me->getRole() === 'client') {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         $animal = $repo->find($id);
         if (!$animal) {
             return $this->json(['error' => 'Animal introuvable.'], 404);
         }
 
-        /** @var User $me */
-        $me = $this->getUser();
         if ($animal->getClinic()?->getId() !== $me->getClinic()?->getId()) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
@@ -136,13 +153,18 @@ final class AnimalApiController extends AbstractController
     #[Route('/{id}', methods: ['DELETE'])]
     public function delete(string $id, AnimalRepository $repo, EntityManagerInterface $em): JsonResponse
     {
+        /** @var User $me */
+        $me = $this->getUser();
+
+        if ($me->getRole() === 'client') {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         $animal = $repo->find($id);
         if (!$animal) {
             return $this->json(['error' => 'Animal introuvable.'], 404);
         }
 
-        /** @var User $me */
-        $me = $this->getUser();
         if ($animal->getClinic()?->getId() !== $me->getClinic()?->getId()) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }

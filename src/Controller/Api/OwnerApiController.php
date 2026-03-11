@@ -19,8 +19,13 @@ final class OwnerApiController extends AbstractController
     {
         /** @var User $me */
         $me = $this->getUser();
-        $clinic = $me->getClinic();
 
+        if ($me->getRole() === 'client') {
+            $owners = $repo->findBy(['email' => $me->getEmail()]);
+            return $this->json(array_map(fn($o) => $this->serialize($o), $owners));
+        }
+
+        $clinic = $me->getClinic();
         $owners = $clinic
             ? $repo->findBy(['clinic' => $clinic])
             : $repo->findBy(['clinic' => null]);
@@ -66,7 +71,15 @@ final class OwnerApiController extends AbstractController
         $owner->setTelephone($data['telephone'] ?? null);
         $owner->setEmail($data['email'] ?? null);
         $owner->setCreatedBy($me);
-        $owner->setClinic($me->getClinic());
+
+        if ($me->getRole() === 'client') {
+            $owner->setUser($me);
+            if (!empty($data['email']) && $data['email'] !== $me->getEmail()) {
+                $me->setEmail($data['email']);
+            }
+        } else {
+            $owner->setClinic($me->getClinic());
+        }
 
         $em->persist($owner);
         $em->flush();
@@ -98,7 +111,12 @@ final class OwnerApiController extends AbstractController
         if (isset($data['prenom'])) { $owner->setPrenom($data['prenom']); }
         if (array_key_exists('adresse', $data)) { $owner->setAdresse($data['adresse']); }
         if (array_key_exists('telephone', $data)) { $owner->setTelephone($data['telephone']); }
-        if (array_key_exists('email', $data)) { $owner->setEmail($data['email']); }
+        if (array_key_exists('email', $data)) {
+            $owner->setEmail($data['email']);
+            if ($me->getRole() === 'client' && !empty($data['email']) && $data['email'] !== $me->getEmail()) {
+                $me->setEmail($data['email']);
+            }
+        }
 
         $em->flush();
 

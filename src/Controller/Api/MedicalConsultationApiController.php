@@ -6,6 +6,7 @@ use App\Entity\MedicalConsultation;
 use App\Entity\User;
 use App\Repository\AnimalRepository;
 use App\Repository\MedicalConsultationRepository;
+use App\Repository\OwnerRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -17,12 +18,27 @@ use Symfony\Component\Routing\Attribute\Route;
 final class MedicalConsultationApiController extends AbstractController
 {
     #[Route('', methods: ['GET'])]
-    public function index(MedicalConsultationRepository $repo): JsonResponse
+    public function index(MedicalConsultationRepository $repo, OwnerRepository $ownerRepo): JsonResponse
     {
         /** @var User $me */
         $me = $this->getUser();
-        $clinic = $me->getClinic();
 
+        if ($me->getRole() === 'client') {
+            $owner = $ownerRepo->findOneBy(['email' => $me->getEmail()]);
+            if (!$owner) {
+                return $this->json([]);
+            }
+            $consultations = [];
+            foreach ($owner->getAnimals() as $animal) {
+                foreach ($repo->findBy(['animal' => $animal], ['dateConsultation' => 'DESC']) as $c) {
+                    $consultations[] = $c;
+                }
+            }
+            usort($consultations, fn($a, $b) => $b->getDateConsultation() <=> $a->getDateConsultation());
+            return $this->json(array_map(fn($c) => $this->serialize($c), $consultations));
+        }
+
+        $clinic = $me->getClinic();
         $consultations = $clinic
             ? $repo->findBy(['clinic' => $clinic], ['dateConsultation' => 'DESC'])
             : $repo->findBy(['clinic' => null]);
@@ -56,6 +72,10 @@ final class MedicalConsultationApiController extends AbstractController
     ): JsonResponse {
         /** @var User $me */
         $me = $this->getUser();
+
+        if ($me->getRole() === 'client') {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
 
         $data = json_decode($request->getContent(), true);
 
@@ -110,6 +130,11 @@ final class MedicalConsultationApiController extends AbstractController
 
         /** @var User $me */
         $me = $this->getUser();
+
+        if ($me->getRole() === 'client') {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         if ($consultation->getClinic()?->getId() !== $me->getClinic()?->getId()) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
@@ -162,6 +187,11 @@ final class MedicalConsultationApiController extends AbstractController
 
         /** @var User $me */
         $me = $this->getUser();
+
+        if ($me->getRole() === 'client') {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         if ($consultation->getClinic()?->getId() !== $me->getClinic()?->getId()) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
