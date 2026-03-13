@@ -5,6 +5,7 @@ namespace App\Controller\Api;
 use App\Entity\Animal;
 use App\Entity\User;
 use App\Repository\AnimalRepository;
+use App\Repository\MedicalConsultationRepository;
 use App\Repository\OwnerRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -148,6 +149,35 @@ final class AnimalApiController extends AbstractController
         $em->flush();
 
         return $this->json($this->serialize($animal));
+    }
+
+    #[Route('/{id}/consultations', methods: ['GET'])]
+    public function consultations(string $id, AnimalRepository $repo, MedicalConsultationRepository $consultationRepo): JsonResponse
+    {
+        $animal = $repo->find($id);
+        if (!$animal) {
+            return $this->json(['error' => 'Animal introuvable.'], 404);
+        }
+
+        /** @var User $me */
+        $me = $this->getUser();
+        if ($me->getRole() !== 'client' && $animal->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
+        $consultations = $consultationRepo->findByAnimalWithVet($id);
+
+        return $this->json(array_map(fn($c) => [
+            'id'              => $c->getId(),
+            'dateConsultation' => $c->getDateConsultation()?->format('c'),
+            'motif'           => $c->getMotif(),
+            'compteRendu'     => $c->getCompteRendu(),
+            'traitements'     => $c->getTraitements(),
+            'veterinaire'     => $c->getVeterinaire() ? [
+                'id'   => $c->getVeterinaire()->getId(),
+                'name' => $c->getVeterinaire()->getName(),
+            ] : null,
+        ], $consultations));
     }
 
     #[Route('/{id}', methods: ['DELETE'])]

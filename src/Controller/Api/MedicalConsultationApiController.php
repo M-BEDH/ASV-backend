@@ -28,20 +28,12 @@ final class MedicalConsultationApiController extends AbstractController
             if (!$owner) {
                 return $this->json([]);
             }
-            $consultations = [];
-            foreach ($owner->getAnimals() as $animal) {
-                foreach ($repo->findBy(['animal' => $animal], ['dateConsultation' => 'DESC']) as $c) {
-                    $consultations[] = $c;
-                }
-            }
-            usort($consultations, fn($a, $b) => $b->getDateConsultation() <=> $a->getDateConsultation());
+            $consultations = $repo->findByOwnerWithRelations($owner->getId());
             return $this->json(array_map(fn($c) => $this->serialize($c), $consultations));
         }
 
         $clinic = $me->getClinic();
-        $consultations = $clinic
-            ? $repo->findBy(['clinic' => $clinic], ['dateConsultation' => 'DESC'])
-            : $repo->findBy(['clinic' => null]);
+        $consultations = $repo->findByClinicWithRelations($clinic?->getId());
 
         return $this->json(array_map(fn($c) => $this->serialize($c), $consultations));
     }

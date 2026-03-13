@@ -16,28 +16,63 @@ class MedicalConsultationRepository extends ServiceEntityRepository
         parent::__construct($registry, MedicalConsultation::class);
     }
 
-    //    /**
-    //     * @return MedicalConsultation[] Returns an array of MedicalConsultation objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('m')
-    //            ->andWhere('m.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('m.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    /**
+     * Récupère les consultations d'un animal avec le vétérinaire en une seule requête (évite le N+1).
+     *
+     * @return MedicalConsultation[]
+     */
+    public function findByAnimalWithVet(string $animalId): array
+    {
+        return $this->createQueryBuilder('c')
+            ->leftJoin('c.veterinaire', 'v')
+            ->addSelect('v')
+            ->where('c.animal = :animalId')
+            ->setParameter('animalId', $animalId)
+            ->orderBy('c.dateConsultation', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 
-    //    public function findOneBySomeField($value): ?MedicalConsultation
-    //    {
-    //        return $this->createQueryBuilder('m')
-    //            ->andWhere('m.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    /**
+     * Récupère toutes les consultations d'une clinique avec animal + vétérinaire en une seule requête.
+     *
+     * @return MedicalConsultation[]
+     */
+    public function findByClinicWithRelations(?string $clinicId): array
+    {
+        $qb = $this->createQueryBuilder('c')
+            ->leftJoin('c.animal', 'a')
+            ->addSelect('a')
+            ->leftJoin('c.veterinaire', 'v')
+            ->addSelect('v')
+            ->orderBy('c.dateConsultation', 'DESC');
+
+        if ($clinicId === null) {
+            $qb->where('c.clinic IS NULL');
+        } else {
+            $qb->where('c.clinic = :clinicId')->setParameter('clinicId', $clinicId);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Récupère les consultations des animaux d'un propriétaire avec les relations.
+     *
+     * @return MedicalConsultation[]
+     */
+    public function findByOwnerWithRelations(string $ownerId): array
+    {
+        return $this->createQueryBuilder('c')
+            ->leftJoin('c.animal', 'a')
+            ->addSelect('a')
+            ->leftJoin('c.veterinaire', 'v')
+            ->addSelect('v')
+            ->leftJoin('a.proprietaire', 'o')
+            ->where('o.id = :ownerId')
+            ->setParameter('ownerId', $ownerId)
+            ->orderBy('c.dateConsultation', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 }
