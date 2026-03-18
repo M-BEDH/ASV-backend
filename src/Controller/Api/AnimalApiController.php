@@ -27,7 +27,8 @@ final class AnimalApiController extends AbstractController
             if (!$owner) {
                 return $this->json([]);
             }
-            return $this->json(array_map(fn($a) => $this->serialize($a), $owner->getAnimals()->toArray()));
+            $animals = $repo->findBy(['proprietaire' => $owner]);
+            return $this->json(array_map(fn($a) => $this->serialize($a), $animals));
         }
 
         $clinic = $me->getClinic();
