@@ -16,14 +16,27 @@ final class UserApiController extends AbstractController
     #[Route('', methods: ['GET'])]
     public function index(UserRepository $repo): JsonResponse
     {
-        $users = array_map(fn($u) => $this->serialize($u), $repo->findAll());
+        /** @var \App\Entity\User $me */
+        $me = $this->getUser();
+        $clinic = $me->getClinic();
 
-        return $this->json($users);
+        $users = $clinic
+            ? $repo->findBy(['clinic' => $clinic])
+            : $repo->findBy(['clinic' => null]);
+
+        return $this->json(array_map(fn($u) => $this->serialize($u), $users));
     }
 
     #[Route('/{id}', methods: ['GET'])]
     public function show(User $user): JsonResponse
     {
+        /** @var \App\Entity\User $me */
+        $me = $this->getUser();
+
+        if ($user->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         return $this->json($this->serialize($user));
     }
 
@@ -50,6 +63,13 @@ final class UserApiController extends AbstractController
     #[Route('/{id}', methods: ['PUT'])]
     public function update(Request $request, User $user, EntityManagerInterface $em): JsonResponse
     {
+        /** @var \App\Entity\User $me */
+        $me = $this->getUser();
+
+        if ($user->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         $data = json_decode($request->getContent(), true);
 
         if (isset($data['email'])) {
@@ -58,9 +78,7 @@ final class UserApiController extends AbstractController
         if (isset($data['name'])) {
             $user->setName($data['name']);
         }
-        if (isset($data['role'])) {
-            $user->setRole($data['role']);
-        }
+        // Le rôle n'est pas modifiable après l'inscription
 
         $em->flush();
 
@@ -70,6 +88,17 @@ final class UserApiController extends AbstractController
     #[Route('/{id}', methods: ['DELETE'])]
     public function delete(User $user, EntityManagerInterface $em): JsonResponse
     {
+        /** @var \App\Entity\User $me */
+        $me = $this->getUser();
+
+        if (!in_array($me->getRole(), ['responsable', 'veterinaire', 'assistant'], true)) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
+        if ($user->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         $em->remove($user);
         $em->flush();
 
