@@ -31,14 +31,13 @@ final class AuthController extends AbstractController
             return $this->json(['error' => 'Les champs email, password, name et role sont obligatoires.'], 400);
         }
 
-        $allowedRoles = ['client', 'veterinaire', 'assistant'];
+        $allowedRoles = ['client', 'veterinaire', 'responsable', 'assistant', 'benevole'];
         if (!in_array($data['role'], $allowedRoles, true)) {
-            return $this->json(['error' => 'Rôle invalide. Valeurs acceptées : client, veterinaire, assistant.'], 400);
+            return $this->json(['error' => 'Rôle invalide. Valeurs acceptées : client, veterinaire, responsable, assistant, benevole.'], 400);
         }
 
-        if ($userRepo->findOneBy(['email' => $data['email']])) {
-            return $this->json(['error' => 'Cet email est déjà utilisé.'], 409);
-        }
+        // Unicité email par établissement (un client peut s'inscrire dans plusieurs établissements)
+        // On vérifie après avoir résolu la clinique — voir vérification en fin de bloc ci-dessous
 
         $user = new User();
         $user->setEmail($data['email']);
@@ -46,40 +45,54 @@ final class AuthController extends AbstractController
         $user->setRole($data['role']);
         $user->setPassword($hasher->hashPassword($user, $data['password']));
 
-        // Clinic assignment
+        // Établissement assignment
+        $allowedTypes = ['clinique', 'refuge', 'association'];
         $clinic = null;
-        if ($data['role'] === 'veterinaire') {
+        if ($data['role'] === 'veterinaire' || $data['role'] === 'responsable') {
             if (!empty($data['clinicName'])) {
-                // Create a new clinic
+                // Create a new établissement
                 $clinic = new Clinic();
                 $clinic->setName($data['clinicName']);
+                if (!empty($data['clinicType']) && in_array($data['clinicType'], $allowedTypes, true)) {
+                    $clinic->setType($data['clinicType']);
+                }
                 $em->persist($clinic);
             } elseif (!empty($data['clinicId'])) {
-                // Join an existing clinic
+                // Join an existing établissement
                 $clinic = $clinicRepo->find($data['clinicId']);
                 if (!$clinic) {
-                    return $this->json(['error' => 'Clinique introuvable.'], 404);
+                    return $this->json(['error' => 'Établissement introuvable.'], 404);
                 }
             }
-            // No clinic provided: allowed (vet can add it later)
-        } elseif ($data['role'] === 'assistant') {
+            // No établissement provided: allowed (vet can add it later)
+        } elseif ($data['role'] === 'assistant' || $data['role'] === 'benevole') {
             if (empty($data['clinicId'])) {
-                return $this->json(['error' => 'Un assistant doit rejoindre une clinique existante (clinicId requis).'], 400);
+                return $this->json(['error' => 'Un assistant ou bénévole doit rejoindre un établissement existant (clinicId requis).'], 400);
             }
             $clinic = $clinicRepo->find($data['clinicId']);
             if (!$clinic) {
-                return $this->json(['error' => 'Clinique introuvable.'], 404);
+                return $this->json(['error' => 'Établissement introuvable.'], 404);
             }
         } elseif ($data['role'] === 'client' && !empty($data['clinicId'])) {
             $clinic = $clinicRepo->find($data['clinicId']);
             if (!$clinic) {
-                return $this->json(['error' => 'Clinique introuvable.'], 404);
+                return $this->json(['error' => 'Établissement introuvable.'], 404);
             }
+        }
+
+        // Vérifie unicité email dans cet établissement
+        if ($userRepo->findOneBy(['email' => $data['email'], 'clinic' => $clinic])) {
+            return $this->json(['error' => 'Cet email est déjà utilisé dans cet établissement.'], 409);
         }
 
         $user->setClinic($clinic);
         $em->persist($user);
-        $em->flush();
+
+        try {
+            $em->flush();
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Erreur lors de la création du compte : ' . $e->getMessage()], 500);
+        }
 
         return $this->json([
             'id'       => $user->getId(),
@@ -94,6 +107,7 @@ final class AuthController extends AbstractController
     public function login(
         Request $request,
         UserRepository $userRepo,
+        ClinicRepository $clinicRepo,
         UserPasswordHasherInterface $hasher,
         JWTTokenManagerInterface $jwtManager,
     ): JsonResponse {
@@ -103,7 +117,26 @@ final class AuthController extends AbstractController
             return $this->json(['error' => 'Email et password requis.'], 400);
         }
 
-        $user = $userRepo->findOneBy(['email' => $data['email']]);
+        // Si un clinicId est fourni, on cherche directement le bon compte
+        if (!empty($data['clinicId'])) {
+            $clinic = $clinicRepo->find($data['clinicId']);
+            $user = $userRepo->findOneBy(['email' => $data['email'], 'clinic' => $clinic]);
+        } else {
+            $users = $userRepo->findBy(['email' => $data['email']]);
+
+            // Plusieurs comptes avec cet email → demander de choisir la clinique
+            if (count($users) > 1) {
+                return $this->json([
+                    'requiresClinicSelection' => true,
+                    'clinics' => array_map(fn($u) => [
+                        'id'   => $u->getClinic()?->getId(),
+                        'name' => $u->getClinic()?->getName() ?? 'Sans établissement',
+                    ], $users),
+                ]);
+            }
+
+            $user = $users[0] ?? null;
+        }
 
         if (!$user || !$hasher->isPasswordValid($user, $data['password'])) {
             return $this->json(['error' => 'Identifiants invalides.'], 401);
@@ -112,11 +145,12 @@ final class AuthController extends AbstractController
         return $this->json([
             'token' => $jwtManager->create($user),
             'user'  => [
-                'id'       => $user->getId(),
-                'email'    => $user->getEmail(),
-                'name'     => $user->getName(),
-                'role'     => $user->getRole(),
-                'clinicId' => $user->getClinic()?->getId(),
+                'id'         => $user->getId(),
+                'email'      => $user->getEmail(),
+                'name'       => $user->getName(),
+                'role'       => $user->getRole(),
+                'clinicId'   => $user->getClinic()?->getId(),
+                'clinicName' => $user->getClinic()?->getName(),
             ],
         ]);
     }
@@ -128,11 +162,12 @@ final class AuthController extends AbstractController
         $user = $this->getUser();
 
         return $this->json([
-            'id'       => $user->getId(),
-            'email'    => $user->getEmail(),
-            'name'     => $user->getName(),
-            'role'     => $user->getRole(),
-            'clinicId' => $user->getClinic()?->getId(),
+            'id'         => $user->getId(),
+            'email'      => $user->getEmail(),
+            'name'       => $user->getName(),
+            'role'       => $user->getRole(),
+            'clinicId'   => $user->getClinic()?->getId(),
+            'clinicName' => $user->getClinic()?->getName(),
         ]);
     }
 }
