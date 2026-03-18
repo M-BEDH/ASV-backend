@@ -13,13 +13,14 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: 'users')]
+#[ORM\UniqueConstraint(name: 'uniq_user_email_clinic', columns: ['email', 'clinic_id'])]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\Column(type: 'string', length: 36)]
     private ?string $id = null;
 
-    #[ORM\Column(length: 255, unique: true)]
+    #[ORM\Column(length: 255)]
     #[Assert\Email(message: "L'adresse email '{{ value }}' n'est pas valide.")]
     private ?string $email = null;
 
@@ -70,7 +71,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getUserIdentifier(): string
     {
-        return $this->email ?? '';
+        return $this->id ?? '';
     }
 
     public function getRoles(): array
