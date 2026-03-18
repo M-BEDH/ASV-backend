@@ -2,108 +2,74 @@
 
 namespace App\Tests\Controller;
 
-use App\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityRepository;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-
-final class UserControllerTest extends WebTestCase
+final class UserControllerTest extends ApiTestCase
 {
-    private KernelBrowser $client;
-    private EntityManagerInterface $manager;
-    private EntityRepository $userRepository;
-    private string $path = '/user/';
-
-    protected function setUp(): void
+    public function testRegister(): void
     {
-        $this->client = static::createClient();
-        $this->manager = static::getContainer()->get('doctrine')->getManager();
-        $this->userRepository = $this->manager->getRepository(User::class);
-
-        foreach ($this->userRepository->findAll() as $object) {
-            $this->manager->remove($object);
-        }
-
-        $this->manager->flush();
-    }
-
-    public function testIndex(): void
-    {
-        $this->client->followRedirects();
-        $this->client->request('GET', $this->path);
-
-        self::assertResponseStatusCodeSame(200);
-        self::assertPageTitleContains('User index');
-    }
-
-    public function testNew(): void
-    {
-        $this->client->request('GET', sprintf('%snew', $this->path));
-        self::assertResponseStatusCodeSame(200);
-
-        $this->client->submitForm('Save', [
-            'user[email]' => 'new.user@example.com',
-            'user[name]' => 'New User',
-            'user[role]' => 'client',
+        $this->request('POST', '/api/auth/register', [
+            'email'    => 'new@test.com',
+            'password' => 'password',
+            'name'     => 'Nouveau',
+            'role'     => 'veterinaire',
         ]);
 
-        self::assertResponseRedirects('/user');
-        self::assertSame(1, $this->userRepository->count([]));
+        self::assertResponseStatusCodeSame(201);
     }
 
-    public function testShow(): void
+    public function testRegisterMissingFields(): void
     {
-        $fixture = (new User())
-            ->setEmail('show.user@example.com')
-            ->setName('Show User')
-            ->setRole('assistant');
+        $this->request('POST', '/api/auth/register', ['email' => 'test@test.com']);
 
-        $this->manager->persist($fixture);
-        $this->manager->flush();
-
-        $this->client->request('GET', sprintf('%s%s', $this->path, $fixture->getId()));
-
-        self::assertResponseStatusCodeSame(200);
-        self::assertPageTitleContains('User');
+        self::assertResponseStatusCodeSame(400);
     }
 
-    public function testEdit(): void
+    public function testRegisterDuplicateEmail(): void
     {
-        $fixture = (new User())
-            ->setEmail('edit.user@example.com')
-            ->setName('Edit User')
-            ->setRole('client');
+        $this->createVet('dup@test.com');
 
-        $this->manager->persist($fixture);
-        $this->manager->flush();
-
-        $this->client->request('GET', sprintf('%s%s/edit', $this->path, $fixture->getId()));
-
-        $this->client->submitForm('Update', [
-            'user[email]' => 'edited.user@example.com',
-            'user[name]' => 'Edited User',
-            'user[role]' => 'veterinaire',
+        $this->request('POST', '/api/auth/register', [
+            'email'    => 'dup@test.com',
+            'password' => 'password',
+            'name'     => 'Doublon',
+            'role'     => 'veterinaire',
         ]);
 
-        self::assertResponseRedirects('/user');
-        self::assertSame('edited.user@example.com', $this->userRepository->find($fixture->getId())?->getEmail());
+        self::assertResponseStatusCodeSame(409);
     }
 
-    public function testRemove(): void
+    public function testLogin(): void
     {
-        $fixture = (new User())
-            ->setEmail('delete.user@example.com')
-            ->setName('Delete User')
-            ->setRole('assistant');
+        $this->createVet('login@test.com');
 
-        $this->manager->persist($fixture);
-        $this->manager->flush();
+        $data = $this->request('POST', '/api/auth/login', [
+            'email'    => 'login@test.com',
+            'password' => 'password',
+        ]);
 
-        $this->client->request('GET', sprintf('%s%s', $this->path, $fixture->getId()));
-        $this->client->submitForm('Delete');
+        self::assertResponseStatusCodeSame(200);
+        self::assertArrayHasKey('token', $data);
+    }
 
-        self::assertResponseRedirects('/user');
-        self::assertSame(0, $this->userRepository->count([]));
+    public function testLoginInvalidCredentials(): void
+    {
+        $this->createVet('vet@test.com');
+
+        $this->request('POST', '/api/auth/login', [
+            'email'    => 'vet@test.com',
+            'password' => 'mauvais_mot_de_passe',
+        ]);
+
+        self::assertResponseStatusCodeSame(401);
+    }
+
+    public function testMe(): void
+    {
+        $this->createVet('me@test.com');
+        $token = $this->getToken('me@test.com');
+
+        $data = $this->request('GET', '/api/auth/me', [], $token);
+
+        self::assertResponseStatusCodeSame(200);
+        self::assertSame('me@test.com', $data['email']);
     }
 }
