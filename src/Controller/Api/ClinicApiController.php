@@ -23,6 +23,7 @@ final class ClinicApiController extends AbstractController
         return $this->json(array_map(fn(Clinic $c) => [
             'id'        => $c->getId(),
             'name'      => $c->getName(),
+            'type'      => $c->getType(),
             'createdAt' => $c->getCreatedAt()?->format('Y-m-d H:i:s'),
         ], $clinics));
     }
@@ -45,6 +46,7 @@ final class ClinicApiController extends AbstractController
         return $this->json([
             'id'        => $clinic->getId(),
             'name'      => $clinic->getName(),
+            'type'      => $clinic->getType(),
             'createdAt' => $clinic->getCreatedAt()?->format('Y-m-d H:i:s'),
         ]);
     }
@@ -74,6 +76,7 @@ final class ClinicApiController extends AbstractController
         return $this->json([
             'id'        => $clinic->getId(),
             'name'      => $clinic->getName(),
+            'type'      => $clinic->getType(),
             'createdAt' => $clinic->getCreatedAt()?->format('Y-m-d H:i:s'),
         ]);
     }
