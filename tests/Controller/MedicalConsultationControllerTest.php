@@ -2,104 +2,102 @@
 
 namespace App\Tests\Controller;
 
-use App\Entity\MedicalConsultation;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityRepository;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-
-final class MedicalConsultationControllerTest extends WebTestCase
+final class MedicalConsultationControllerTest extends ApiTestCase
 {
-    private KernelBrowser $client;
-    private EntityManagerInterface $manager;
-    private EntityRepository $medicalConsultationRepository;
-    private string $path = '/medical/consultation/';
-
-    protected function setUp(): void
+    public function testList(): void
     {
-        $this->client = static::createClient();
-        $this->manager = static::getContainer()->get('doctrine')->getManager();
-        $this->medicalConsultationRepository = $this->manager->getRepository(MedicalConsultation::class);
+        $vet = $this->createVet();
+        $token = $this->getToken($vet->getEmail());
 
-        foreach ($this->medicalConsultationRepository->findAll() as $object) {
-            $this->manager->remove($object);
-        }
-
-        $this->manager->flush();
-    }
-
-    public function testIndex(): void
-    {
-        $this->client->followRedirects();
-        $this->client->request('GET', $this->path);
+        $data = $this->request('GET', '/api/consultations', [], $token);
 
         self::assertResponseStatusCodeSame(200);
-        self::assertPageTitleContains('MedicalConsultation index');
+        self::assertIsArray($data);
     }
 
-    public function testNew(): void
+    public function testCreate(): void
     {
-        $this->client->request('GET', sprintf('%snew', $this->path));
+        $vet = $this->createVet();
+        $token = $this->getToken($vet->getEmail());
+
+        $animal = $this->request('POST', '/api/animals', ['nom' => 'Rex', 'espece' => 'Chien'], $token);
+
+        $data = $this->request('POST', '/api/consultations', [
+            'animalId'         => $animal['id'],
+            'dateConsultation' => '2025-03-16 10:00',
+            'motif'            => 'Vaccin',
+        ], $token);
+
+        self::assertResponseStatusCodeSame(201);
+        self::assertSame('Vaccin', $data['motif']);
+    }
+
+    public function testCreateMissingFields(): void
+    {
+        $vet = $this->createVet();
+        $token = $this->getToken($vet->getEmail());
+
+        $this->request('POST', '/api/consultations', ['motif' => 'Vaccin'], $token);
+
+        self::assertResponseStatusCodeSame(400);
+    }
+
+    public function testCreateAsClientForbidden(): void
+    {
+        $client = $this->createUserClient();
+        $token = $this->getToken($client->getEmail());
+
+        $this->request('POST', '/api/consultations', [
+            'animalId'         => 'some-id',
+            'dateConsultation' => '2025-03-16 10:00',
+            'motif'            => 'Vaccin',
+        ], $token);
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testUpdate(): void
+    {
+        $vet = $this->createVet();
+        $token = $this->getToken($vet->getEmail());
+
+        $animal = $this->request('POST', '/api/animals', ['nom' => 'Rex', 'espece' => 'Chien'], $token);
+        $created = $this->request('POST', '/api/consultations', [
+            'animalId'         => $animal['id'],
+            'dateConsultation' => '2025-03-16 10:00',
+            'motif'            => 'Vaccin',
+        ], $token);
+
+        $updated = $this->request('PUT', '/api/consultations/' . $created['id'], ['motif' => 'Urgence'], $token);
+
         self::assertResponseStatusCodeSame(200);
-
-        $this->client->submitForm('Save', [
-            'medical_consultation[dateConsultation]' => '2026-03-05T10:00',
-            'medical_consultation[motif]' => 'Annual check',
-            'medical_consultation[compteRendu]' => 'No issues',
-        ]);
-
-        self::assertResponseRedirects('/medical/consultation');
-        self::assertSame(1, $this->medicalConsultationRepository->count([]));
+        self::assertSame('Urgence', $updated['motif']);
     }
 
-    public function testShow(): void
+    public function testDelete(): void
     {
-        $fixture = (new MedicalConsultation())
-            ->setDateConsultation(new \DateTime('2026-03-05 10:00:00'))
-            ->setMotif('Follow-up consultation');
+        $vet = $this->createVet();
+        $token = $this->getToken($vet->getEmail());
 
-        $this->manager->persist($fixture);
-        $this->manager->flush();
+        $animal = $this->request('POST', '/api/animals', ['nom' => 'Rex', 'espece' => 'Chien'], $token);
+        $created = $this->request('POST', '/api/consultations', [
+            'animalId'         => $animal['id'],
+            'dateConsultation' => '2025-03-16 10:00',
+            'motif'            => 'Vaccin',
+        ], $token);
 
-        $this->client->request('GET', sprintf('%s%s', $this->path, $fixture->getId()));
+        $this->request('DELETE', '/api/consultations/' . $created['id'], [], $token);
 
-        self::assertResponseStatusCodeSame(200);
-        self::assertPageTitleContains('MedicalConsultation');
+        self::assertResponseStatusCodeSame(204);
     }
 
-    public function testEdit(): void
+    public function testDeleteNotFound(): void
     {
-        $fixture = (new MedicalConsultation())
-            ->setDateConsultation(new \DateTime('2026-03-05 10:00:00'))
-            ->setMotif('Initial reason');
+        $vet = $this->createVet();
+        $token = $this->getToken($vet->getEmail());
 
-        $this->manager->persist($fixture);
-        $this->manager->flush();
+        $this->request('DELETE', '/api/consultations/inexistant-id', [], $token);
 
-        $this->client->request('GET', sprintf('%s%s/edit', $this->path, $fixture->getId()));
-
-        $this->client->submitForm('Update', [
-            'medical_consultation[dateConsultation]' => '2026-03-06T11:30',
-            'medical_consultation[motif]' => 'Updated reason',
-        ]);
-
-        self::assertResponseRedirects('/medical/consultation');
-        self::assertSame('Updated reason', $this->medicalConsultationRepository->find($fixture->getId())?->getMotif());
-    }
-
-    public function testRemove(): void
-    {
-        $fixture = (new MedicalConsultation())
-            ->setDateConsultation(new \DateTime('2026-03-05 10:00:00'))
-            ->setMotif('To remove');
-
-        $this->manager->persist($fixture);
-        $this->manager->flush();
-
-        $this->client->request('GET', sprintf('%s%s', $this->path, $fixture->getId()));
-        $this->client->submitForm('Delete');
-
-        self::assertResponseRedirects('/medical/consultation');
-        self::assertSame(0, $this->medicalConsultationRepository->count([]));
+        self::assertResponseStatusCodeSame(404);
     }
 }
