@@ -2,115 +2,84 @@
 
 namespace App\Tests\Controller;
 
-use App\Entity\Animal;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityRepository;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-
-final class AnimalControllerTest extends WebTestCase
+final class AnimalControllerTest extends ApiTestCase
 {
-    private KernelBrowser $client;
-    private EntityManagerInterface $manager;
-    private EntityRepository $animalRepository;
-    private string $path = '/animal/';
-
-    protected function setUp(): void
+    public function testList(): void
     {
-        $this->client = static::createClient();
-        $this->manager = static::getContainer()->get('doctrine')->getManager();
-        $this->animalRepository = $this->manager->getRepository(Animal::class);
+        $vet = $this->createVet();
+        $token = $this->getToken($vet->getEmail());
 
-        foreach ($this->animalRepository->findAll() as $object) {
-            $this->manager->remove($object);
-        }
-
-        $this->manager->flush();
-    }
-
-    public function testIndex(): void
-    {
-        $this->client->followRedirects();
-        $this->client->request('GET', $this->path);
+        $data = $this->request('GET', '/api/animals', [], $token);
 
         self::assertResponseStatusCodeSame(200);
-        self::assertPageTitleContains('Animal index');
-
-        // Use the $crawler to perform additional assertions e.g.
-        // self::assertSame('Some text on the page', $crawler->filter('.p')->first()->text());
+        self::assertIsArray($data);
     }
 
-    public function testNew(): void
+    public function testCreate(): void
     {
-        $this->client->request('GET', sprintf('%snew', $this->path));
+        $vet = $this->createVet();
+        $token = $this->getToken($vet->getEmail());
+
+        $data = $this->request('POST', '/api/animals', [
+            'nom'    => 'Rex',
+            'espece' => 'Chien',
+        ], $token);
+
+        self::assertResponseStatusCodeSame(201);
+        self::assertSame('Rex', $data['nom']);
+        self::assertSame('Chien', $data['espece']);
+    }
+
+    public function testCreateMissingFields(): void
+    {
+        $vet = $this->createVet();
+        $token = $this->getToken($vet->getEmail());
+
+        $this->request('POST', '/api/animals', ['nom' => 'Rex'], $token);
+
+        self::assertResponseStatusCodeSame(400);
+    }
+
+    public function testCreateAsClientForbidden(): void
+    {
+        $client = $this->createUserClient();
+        $token = $this->getToken($client->getEmail());
+
+        $this->request('POST', '/api/animals', ['nom' => 'Rex', 'espece' => 'Chien'], $token);
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testUpdate(): void
+    {
+        $vet = $this->createVet();
+        $token = $this->getToken($vet->getEmail());
+
+        $created = $this->request('POST', '/api/animals', ['nom' => 'Rex', 'espece' => 'Chien'], $token);
+        $updated = $this->request('PUT', '/api/animals/' . $created['id'], ['nom' => 'Max'], $token);
+
         self::assertResponseStatusCodeSame(200);
-
-        $this->client->submitForm('Save', [
-            'animal[nom]' => 'Rex',
-            'animal[espece]' => 'Chien',
-            'animal[race]' => 'Labrador',
-        ]);
-
-        self::assertResponseRedirects('/animal');
-        self::assertSame(1, $this->animalRepository->count([]));
-
-        $this->markTestIncomplete('This test was generated');
+        self::assertSame('Max', $updated['nom']);
     }
 
-    public function testShow(): void
+    public function testDelete(): void
     {
-        $fixture = (new Animal())
-            ->setNom('Rex')
-            ->setEspece('Chien')
-            ->setRace('Labrador');
-        $this->manager->persist($fixture);
-        $this->manager->flush();
+        $vet = $this->createVet();
+        $token = $this->getToken($vet->getEmail());
 
-        $this->client->request('GET', sprintf('%s%s', $this->path, $fixture->getId()));
+        $created = $this->request('POST', '/api/animals', ['nom' => 'Rex', 'espece' => 'Chien'], $token);
+        $this->request('DELETE', '/api/animals/' . $created['id'], [], $token);
 
-        self::assertResponseStatusCodeSame(200);
-        self::assertPageTitleContains('Animal');
-
-        $this->markTestIncomplete('This test was generated');
+        self::assertResponseStatusCodeSame(204);
     }
 
-    public function testEdit(): void
+    public function testDeleteNotFound(): void
     {
-        $fixture = (new Animal())
-            ->setNom('Rex')
-            ->setEspece('Chien')
-            ->setRace('Labrador');
-        $this->manager->persist($fixture);
-        $this->manager->flush();
+        $vet = $this->createVet();
+        $token = $this->getToken($vet->getEmail());
 
-        $this->client->request('GET', sprintf('%s%s/edit', $this->path, $fixture->getId()));
-        $this->client->submitForm('Update', [
-            'animal[nom]' => 'Rex',
-            'animal[espece]' => 'Chien',
-            'animal[race]' => 'Labrador',
-        ]);
+        $this->request('DELETE', '/api/animals/inexistant-id', [], $token);
 
-        self::assertResponseRedirects('/animal');
-        $fixture = $this->animalRepository->findAll();
-
-        $this->markTestIncomplete('This test was generated');
-    }
-
-    public function testRemove(): void
-    {
-        $fixture = (new Animal())
-            ->setNom('Rex')
-            ->setEspece('Chien')
-            ->setRace('Labrador');
-        $this->manager->persist($fixture);
-        $this->manager->flush();
-
-        $this->client->request('GET', sprintf('%s%s', $this->path, $fixture->getId()));
-        $this->client->submitForm('Delete');
-
-        self::assertResponseRedirects('/animal');
-        self::assertSame(0, $this->animalRepository->count([]));
-
-        $this->markTestIncomplete('This test was generated');
+        self::assertResponseStatusCodeSame(404);
     }
 }
