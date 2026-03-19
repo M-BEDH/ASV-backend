@@ -1,0 +1,6 @@
+artprima_prometheus_metrics:
+    namespace: asv
+    storage: apcu
+    disable_default_promphp_metrics: true
+    ignored_routes:
+        - _wdt
