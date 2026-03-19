@@ -8,6 +8,7 @@ use App\Repository\ClinicRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Prometheus\CollectorRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,6 +18,10 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/auth')]
 final class AuthController extends AbstractController
 {
+    public function __construct(
+        private CollectorRegistry $registry,
+    ) {}
+
     #[Route('/register', methods: ['POST'])]
     public function register(
         Request $request,
@@ -94,6 +99,10 @@ final class AuthController extends AbstractController
             return $this->json(['error' => 'Erreur lors de la création du compte : ' . $e->getMessage()], 500);
         }
 
+        $this->registry
+            ->getOrRegisterCounter('asv', 'user_register_total', 'Nombre d\'inscriptions', ['role'])
+            ->inc([$user->getRole()]);
+
         return $this->json([
             'id'       => $user->getId(),
             'email'    => $user->getEmail(),
@@ -141,6 +150,10 @@ final class AuthController extends AbstractController
         if (!$user || !$hasher->isPasswordValid($user, $data['password'])) {
             return $this->json(['error' => 'Identifiants invalides.'], 401);
         }
+
+        $this->registry
+            ->getOrRegisterCounter('asv', 'user_login_total', 'Nombre de connexions réussies', ['role'])
+            ->inc([$user->getRole()]);
 
         return $this->json([
             'token' => $jwtManager->create($user),
