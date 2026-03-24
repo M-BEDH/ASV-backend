@@ -21,7 +21,7 @@ final class OwnerApiController extends AbstractController
         $me = $this->getUser();
 
         if ($me->getRole() === 'client') {
-            $owners = $repo->findBy(['email' => $me->getEmail()]);
+            $owners = $repo->findBy(['user' => $me]);
             return $this->json(array_map(fn($o) => $this->serialize($o), $owners));
         }
 
@@ -101,7 +101,11 @@ final class OwnerApiController extends AbstractController
 
         /** @var User $me */
         $me = $this->getUser();
-        if ($owner->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if ($me->getRole() === 'client') {
+            if ($owner->getUser()?->getId() !== $me->getId()) {
+                return $this->json(['error' => 'Accès refusé.'], 403);
+            }
+        } elseif ($owner->getClinic()?->getId() !== $me->getClinic()?->getId()) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -133,7 +137,11 @@ final class OwnerApiController extends AbstractController
 
         /** @var User $me */
         $me = $this->getUser();
-        if ($owner->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if ($me->getRole() === 'client') {
+            if ($owner->getUser()?->getId() !== $me->getId()) {
+                return $this->json(['error' => 'Accès refusé.'], 403);
+            }
+        } elseif ($owner->getClinic()?->getId() !== $me->getClinic()?->getId()) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
