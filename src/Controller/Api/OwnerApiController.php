@@ -87,6 +87,18 @@ final class OwnerApiController extends AbstractController
         return $this->json($this->serialize($owner), 201);
     }
 
+    private function canAccess(Owner $owner): bool
+    {
+        /** @var User $me */
+        $me = $this->getUser();
+
+        if ($me->getRole() === 'client') {
+            return $owner->getUser()?->getId() === $me->getId();
+        }
+
+        return $owner->getClinic()?->getId() === $me->getClinic()?->getId();
+    }
+
     #[Route('/{id}', methods: ['PUT'])]
     public function update(
         string $id,
@@ -99,16 +111,12 @@ final class OwnerApiController extends AbstractController
             return $this->json(['error' => 'Propriétaire introuvable.'], 404);
         }
 
-        /** @var User $me */
-        $me = $this->getUser();
-        if ($me->getRole() === 'client') {
-            if ($owner->getUser()?->getId() !== $me->getId()) {
-                return $this->json(['error' => 'Accès refusé.'], 403);
-            }
-        } elseif ($owner->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if (!$this->canAccess($owner)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
+        /** @var User $me */
+        $me = $this->getUser();
         $data = json_decode($request->getContent(), true);
 
         if (isset($data['nom'])) { $owner->setNom($data['nom']); }
@@ -135,13 +143,7 @@ final class OwnerApiController extends AbstractController
             return $this->json(['error' => 'Propriétaire introuvable.'], 404);
         }
 
-        /** @var User $me */
-        $me = $this->getUser();
-        if ($me->getRole() === 'client') {
-            if ($owner->getUser()?->getId() !== $me->getId()) {
-                return $this->json(['error' => 'Accès refusé.'], 403);
-            }
-        } elseif ($owner->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if (!$this->canAccess($owner)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
