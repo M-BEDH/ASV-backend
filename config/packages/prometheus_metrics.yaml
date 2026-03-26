@@ -4,3 +4,7 @@ artprima_prometheus_metrics:
     disable_default_promphp_metrics: true
     ignored_routes:
         - _wdt
+
+when@test:
+    artprima_prometheus_metrics:
+        storage: in_memory
