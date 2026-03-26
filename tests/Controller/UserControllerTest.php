@@ -25,8 +25,15 @@ final class UserControllerTest extends ApiTestCase
 
     public function testRegisterDuplicateEmail(): void
     {
-        $this->createVet('dup@test.com');
+        // Premier enregistrement sans établissement
+        $this->request('POST', '/api/auth/register', [
+            'email'    => 'dup@test.com',
+            'password' => 'password',
+            'name'     => 'Premier',
+            'role'     => 'veterinaire',
+        ]);
 
+        // Deuxième enregistrement avec le même email, même contexte (sans établissement)
         $this->request('POST', '/api/auth/register', [
             'email'    => 'dup@test.com',
             'password' => 'password',
