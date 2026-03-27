@@ -66,12 +66,11 @@ class UserTest extends TestCase
         self::assertInstanceOf(\DateTimeImmutable::class, $user->getCreatedAt());
     }
 
-    public function testGetUserIdentifierRetourneLEmail(): void
+    public function testGetUserIdentifierRetourneLId(): void
     {
         $user = new User();
-        $user->setEmail('vet@test.com');
 
-        self::assertSame('vet@test.com', $user->getUserIdentifier());
+        self::assertSame($user->getId(), $user->getUserIdentifier());
     }
 
     public function testEmailFormatValide(): void
