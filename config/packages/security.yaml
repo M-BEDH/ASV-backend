@@ -7,7 +7,7 @@ security:
         app_user_provider:
             entity:
                 class: App\Entity\User
-                property: id
+                property: id   # à la place de email, car on va utiliser l'id pour l'authentification 
 
     firewalls:
         main:
