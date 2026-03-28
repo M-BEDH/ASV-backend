@@ -66,6 +66,10 @@ final class ClinicApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
+        if (!in_array($me->getRole(), ['responsable', 'veterinaire'], true)) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         $data = json_decode($request->getContent(), true);
         if (!empty($data['name'])) {
             $clinic->setName($data['name']);
