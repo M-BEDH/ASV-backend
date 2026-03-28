@@ -5,6 +5,7 @@ namespace App\Controller\Api;
 use App\Entity\Clinic;
 use App\Entity\User;
 use App\Repository\ClinicRepository;
+use App\Repository\OwnerRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -29,6 +30,7 @@ final class AuthController extends AbstractController
         UserPasswordHasherInterface $hasher,
         UserRepository $userRepo,
         ClinicRepository $clinicRepo,
+        OwnerRepository $ownerRepo,
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
@@ -78,7 +80,10 @@ final class AuthController extends AbstractController
             if (!$clinic) {
                 return $this->json(['error' => 'Établissement introuvable.'], 404);
             }
-        } elseif ($data['role'] === 'client' && !empty($data['clinicId'])) {
+        } elseif ($data['role'] === 'client') {
+            if (empty($data['clinicId'])) {
+                return $this->json(['error' => 'Un client doit choisir un établissement (clinicId requis).'], 400);
+            }
             $clinic = $clinicRepo->find($data['clinicId']);
             if (!$clinic) {
                 return $this->json(['error' => 'Établissement introuvable.'], 404);
@@ -97,6 +102,15 @@ final class AuthController extends AbstractController
             $em->flush();
         } catch (\Exception $e) {
             return $this->json(['error' => 'Erreur lors de la création du compte : ' . $e->getMessage()], 500);
+        }
+
+        // Lier le user à un owner existant (même email + même clinique)
+        if ($data['role'] === 'client' && $clinic !== null) {
+            $existingOwner = $ownerRepo->findOneBy(['email' => $data['email'], 'clinic' => $clinic]);
+            if ($existingOwner && $existingOwner->getUser() === null) {
+                $existingOwner->setUser($user);
+                $em->flush();
+            }
         }
 
         $this->registry

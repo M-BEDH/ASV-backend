@@ -5,6 +5,7 @@ namespace App\Controller\Api;
 use App\Entity\Owner;
 use App\Entity\User;
 use App\Repository\OwnerRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -54,6 +55,8 @@ final class OwnerApiController extends AbstractController
     public function create(
         Request $request,
         EntityManagerInterface $em,
+        UserRepository $userRepo,
+        OwnerRepository $ownerRepo,
     ): JsonResponse {
         /** @var User $me */
         $me = $this->getUser();
@@ -73,12 +76,28 @@ final class OwnerApiController extends AbstractController
         $owner->setCreatedBy($me);
 
         if ($me->getRole() === 'client') {
+            // Un client ne peut avoir qu'un seul profil owner par établissement
+            $existing = $ownerRepo->findOneBy(['user' => $me]);
+            if ($existing !== null) {
+                return $this->json(['error' => 'Vous avez déjà un profil propriétaire.'], 409);
+            }
+
             $owner->setUser($me);
+            $owner->setClinic($me->getClinic());
             if (!empty($data['email']) && $data['email'] !== $me->getEmail()) {
                 $me->setEmail($data['email']);
             }
         } else {
-            $owner->setClinic($me->getClinic());
+            $clinic = $me->getClinic();
+            $owner->setClinic($clinic);
+
+            // Lier un user client existant (même email + même clinique)
+            if (!empty($data['email']) && $clinic !== null) {
+                $existingUser = $userRepo->findOneBy(['email' => $data['email'], 'clinic' => $clinic]);
+                if ($existingUser !== null && $existingUser->getRole() === 'client') {
+                    $owner->setUser($existingUser);
+                }
+            }
         }
 
         $em->persist($owner);
