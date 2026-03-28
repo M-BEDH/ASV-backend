@@ -80,14 +80,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         // assistant has same rights as veterinaire
         $symfonyRole = match ($this->role) {
             'veterinaire', 'assistant' => 'ROLE_VETERINAIRE',
-            'client'                   => 'ROLE_CLIENT',
-            default                    => 'ROLE_USER',
+            'client' => 'ROLE_CLIENT',
+            default => 'ROLE_USER',
         };
 
         return [$symfonyRole, 'ROLE_USER'];
     }
 
-    public function eraseCredentials(): void {}
+    public function eraseCredentials(): void
+    {
+    }
 
     // --- PasswordAuthenticatedUserInterface ---
 
@@ -104,31 +106,77 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     // --- Getters / Setters ---
 
-    public function getId(): ?string { return $this->id; }
+    public function getId(): ?string
+    {
+        return $this->id;
+    }
 
-    public function getEmail(): ?string { return $this->email; }
-    public function setEmail(string $email): static { $this->email = $email; return $this; }
+    public function getEmail(): ?string
+    {
+        return $this->email;
+    }
+    public function setEmail(string $email): static
+    {
+        $this->email = $email;
+        return $this;
+    }
 
-    public function getName(): ?string { return $this->name; }
-    public function setName(string $name): static { $this->name = $name; return $this; }
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+    public function setName(string $name): static
+    {
+        $this->name = $name;
+        return $this;
+    }
 
-    public function getRole(): ?string { return $this->role; }
-    public function setRole(string $role): static { $this->role = $role; return $this; }
+    public function getRole(): ?string
+    {
+        return $this->role;
+    }
+    public function setRole(string $role): static
+    {
+        $this->role = $role;
+        return $this;
+    }
 
-    public function getClinic(): ?Clinic { return $this->clinic; }
-    public function setClinic(?Clinic $clinic): static { $this->clinic = $clinic; return $this; }
+    public function getClinic(): ?Clinic
+    {
+        return $this->clinic;
+    }
+    public function setClinic(?Clinic $clinic): static
+    {
+        $this->clinic = $clinic;
+        return $this;
+    }
 
-    public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
+    public function getCreatedAt(): ?\DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
 
     /** @return Collection<int, Animal> */
-    public function getCreatedAnimals(): Collection { return $this->createdAnimals; }
+    public function getCreatedAnimals(): Collection
+    {
+        return $this->createdAnimals;
+    }
 
     /** @return Collection<int, Owner> */
-    public function getCreatedOwners(): Collection { return $this->createdOwners; }
+    public function getCreatedOwners(): Collection
+    {
+        return $this->createdOwners;
+    }
 
     /** @return Collection<int, Owner> */
-    public function getLinkedOwners(): Collection { return $this->linkedOwners; }
+    public function getLinkedOwners(): Collection
+    {
+        return $this->linkedOwners;
+    }
 
     /** @return Collection<int, MedicalConsultation> */
-    public function getMedicalConsultationsAsVeterinaire(): Collection { return $this->medicalConsultationsAsVeterinaire; }
+    public function getMedicalConsultationsAsVeterinaire(): Collection
+    {
+        return $this->medicalConsultationsAsVeterinaire;
+    }
 }

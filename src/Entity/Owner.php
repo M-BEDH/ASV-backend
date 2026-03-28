@@ -62,38 +62,111 @@ class Owner
         return trim(($this->prenom ?? '') . ' ' . ($this->nom ?? '')) ?: ($this->id ?? 'Owner');
     }
 
-    public function getId(): ?string { return $this->id; }
-    public function setId(string $id): static { $this->id = $id; return $this; }
+    public function getId(): ?string
+    {
+        return $this->id;
+    }
+    public function setId(string $id): static
+    {
+        $this->id = $id;
+        return $this;
+    }
 
-    public function getNom(): ?string { return $this->nom; }
-    public function setNom(string $nom): static { $this->nom = $nom; return $this; }
+    public function getNom(): ?string
+    {
+        return $this->nom;
+    }
+    public function setNom(string $nom): static
+    {
+        $this->nom = $nom;
+        return $this;
+    }
 
-    public function getPrenom(): ?string { return $this->prenom; }
-    public function setPrenom(string $prenom): static { $this->prenom = $prenom; return $this; }
+    public function getPrenom(): ?string
+    {
+        return $this->prenom;
+    }
+    public function setPrenom(string $prenom): static
+    {
+        $this->prenom = $prenom;
+        return $this;
+    }
 
-    public function getAdresse(): ?string { return $this->adresse; }
-    public function setAdresse(?string $adresse): static { $this->adresse = $adresse; return $this; }
+    public function getAdresse(): ?string
+    {
+        return $this->adresse;
+    }
+    public function setAdresse(?string $adresse): static
+    {
+        $this->adresse = $adresse;
+        return $this;
+    }
 
-    public function getTelephone(): ?string { return $this->telephone; }
-    public function setTelephone(?string $telephone): static { $this->telephone = $telephone; return $this; }
+    public function getTelephone(): ?string
+    {
+        return $this->telephone;
+    }
+    public function setTelephone(?string $telephone): static
+    {
+        $this->telephone = $telephone;
+        return $this;
+    }
 
-    public function getEmail(): ?string { return $this->email; }
-    public function setEmail(?string $email): static { $this->email = $email; return $this; }
+    public function getEmail(): ?string
+    {
+        return $this->email;
+    }
+    public function setEmail(?string $email): static
+    {
+        $this->email = $email;
+        return $this;
+    }
 
-    public function getCreatedBy(): ?User { return $this->createdBy; }
-    public function setCreatedBy(?User $createdBy): static { $this->createdBy = $createdBy; return $this; }
+    public function getCreatedBy(): ?User
+    {
+        return $this->createdBy;
+    }
+    public function setCreatedBy(?User $createdBy): static
+    {
+        $this->createdBy = $createdBy;
+        return $this;
+    }
 
-    public function getClinic(): ?Clinic { return $this->clinic; }
-    public function setClinic(?Clinic $clinic): static { $this->clinic = $clinic; return $this; }
+    public function getClinic(): ?Clinic
+    {
+        return $this->clinic;
+    }
+    public function setClinic(?Clinic $clinic): static
+    {
+        $this->clinic = $clinic;
+        return $this;
+    }
 
-    public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static { $this->createdAt = $createdAt; return $this; }
+    public function getCreatedAt(): ?\DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+        return $this;
+    }
 
-    public function getUser(): ?User { return $this->user; }
-    public function setUser(?User $user): static { $this->user = $user; return $this; }
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
+        return $this;
+    }
 
     /** @return Collection<int, Animal> */
-    public function getAnimals(): Collection { return $this->animals; }
+    public function getAnimals(): Collection
+    {
+        return $this->animals;
+    }
 
     public function addAnimal(Animal $animal): static
     {

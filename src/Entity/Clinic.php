@@ -41,16 +41,39 @@ class Clinic
         return $this->name ?? $this->id ?? 'Clinic';
     }
 
-    public function getId(): ?string { return $this->id; }
+    public function getId(): ?string
+    {
+        return $this->id;
+    }
 
-    public function getName(): ?string { return $this->name; }
-    public function setName(string $name): static { $this->name = $name; return $this; }
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+    public function setName(string $name): static
+    {
+        $this->name = $name;
+        return $this;
+    }
 
-    public function getType(): string { return $this->type; }
-    public function setType(string $type): static { $this->type = $type; return $this; }
+    public function getType(): string
+    {
+        return $this->type;
+    }
+    public function setType(string $type): static
+    {
+        $this->type = $type;
+        return $this;
+    }
 
-    public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
+    public function getCreatedAt(): ?\DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
 
     /** @return Collection<int, User> */
-    public function getUsers(): Collection { return $this->users; }
+    public function getUsers(): Collection
+    {
+        return $this->users;
+    }
 }

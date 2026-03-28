@@ -53,30 +53,93 @@ class MedicalConsultation
         return ($this->dateConsultation?->format('Y-m-d H:i')) ?? ($this->id ?? 'Consultation');
     }
 
-    public function getId(): ?string { return $this->id; }
-    public function setId(string $id): static { $this->id = $id; return $this; }
+    public function getId(): ?string
+    {
+        return $this->id;
+    }
+    public function setId(string $id): static
+    {
+        $this->id = $id;
+        return $this;
+    }
 
-    public function getAnimal(): ?Animal { return $this->animal; }
-    public function setAnimal(?Animal $animal): static { $this->animal = $animal; return $this; }
+    public function getAnimal(): ?Animal
+    {
+        return $this->animal;
+    }
+    public function setAnimal(?Animal $animal): static
+    {
+        $this->animal = $animal;
+        return $this;
+    }
 
-    public function getDateConsultation(): ?\DateTimeInterface { return $this->dateConsultation; }
-    public function setDateConsultation(\DateTimeInterface $dateConsultation): static { $this->dateConsultation = $dateConsultation; return $this; }
+    public function getDateConsultation(): ?\DateTimeInterface
+    {
+        return $this->dateConsultation;
+    }
+    public function setDateConsultation(\DateTimeInterface $dateConsultation): static
+    {
+        $this->dateConsultation = $dateConsultation;
+        return $this;
+    }
 
-    public function getVeterinaire(): ?User { return $this->veterinaire; }
-    public function setVeterinaire(?User $veterinaire): static { $this->veterinaire = $veterinaire; return $this; }
+    public function getVeterinaire(): ?User
+    {
+        return $this->veterinaire;
+    }
+    public function setVeterinaire(?User $veterinaire): static
+    {
+        $this->veterinaire = $veterinaire;
+        return $this;
+    }
 
-    public function getClinic(): ?Clinic { return $this->clinic; }
-    public function setClinic(?Clinic $clinic): static { $this->clinic = $clinic; return $this; }
+    public function getClinic(): ?Clinic
+    {
+        return $this->clinic;
+    }
+    public function setClinic(?Clinic $clinic): static
+    {
+        $this->clinic = $clinic;
+        return $this;
+    }
 
-    public function getMotif(): ?string { return $this->motif; }
-    public function setMotif(string $motif): static { $this->motif = $motif; return $this; }
+    public function getMotif(): ?string
+    {
+        return $this->motif;
+    }
+    public function setMotif(string $motif): static
+    {
+        $this->motif = $motif;
+        return $this;
+    }
 
-    public function getCompteRendu(): ?string { return $this->compteRendu; }
-    public function setCompteRendu(?string $compteRendu): static { $this->compteRendu = $compteRendu; return $this; }
+    public function getCompteRendu(): ?string
+    {
+        return $this->compteRendu;
+    }
+    public function setCompteRendu(?string $compteRendu): static
+    {
+        $this->compteRendu = $compteRendu;
+        return $this;
+    }
 
-    public function getTraitements(): ?string { return $this->traitements; }
-    public function setTraitements(?string $traitements): static { $this->traitements = $traitements; return $this; }
+    public function getTraitements(): ?string
+    {
+        return $this->traitements;
+    }
+    public function setTraitements(?string $traitements): static
+    {
+        $this->traitements = $traitements;
+        return $this;
+    }
 
-    public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static { $this->createdAt = $createdAt; return $this; }
+    public function getCreatedAt(): ?\DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+        return $this;
+    }
 }

@@ -62,38 +62,111 @@ class Animal
         return $this->nom ?? $this->id ?? 'Animal';
     }
 
-    public function getId(): ?string { return $this->id; }
-    public function setId(string $id): static { $this->id = $id; return $this; }
+    public function getId(): ?string
+    {
+        return $this->id;
+    }
+    public function setId(string $id): static
+    {
+        $this->id = $id;
+        return $this;
+    }
 
-    public function getNom(): ?string { return $this->nom; }
-    public function setNom(string $nom): static { $this->nom = $nom; return $this; }
+    public function getNom(): ?string
+    {
+        return $this->nom;
+    }
+    public function setNom(string $nom): static
+    {
+        $this->nom = $nom;
+        return $this;
+    }
 
-    public function getEspece(): ?string { return $this->espece; }
-    public function setEspece(string $espece): static { $this->espece = $espece; return $this; }
+    public function getEspece(): ?string
+    {
+        return $this->espece;
+    }
+    public function setEspece(string $espece): static
+    {
+        $this->espece = $espece;
+        return $this;
+    }
 
-    public function getRace(): ?string { return $this->race; }
-    public function setRace(?string $race): static { $this->race = $race; return $this; }
+    public function getRace(): ?string
+    {
+        return $this->race;
+    }
+    public function setRace(?string $race): static
+    {
+        $this->race = $race;
+        return $this;
+    }
 
-    public function getDateNaissance(): ?\DateTimeInterface { return $this->dateNaissance; }
-    public function setDateNaissance(?\DateTimeInterface $dateNaissance): static { $this->dateNaissance = $dateNaissance; return $this; }
+    public function getDateNaissance(): ?\DateTimeInterface
+    {
+        return $this->dateNaissance;
+    }
+    public function setDateNaissance(?\DateTimeInterface $dateNaissance): static
+    {
+        $this->dateNaissance = $dateNaissance;
+        return $this;
+    }
 
-    public function getRemarques(): ?string { return $this->remarques; }
-    public function setRemarques(?string $remarques): static { $this->remarques = $remarques; return $this; }
+    public function getRemarques(): ?string
+    {
+        return $this->remarques;
+    }
+    public function setRemarques(?string $remarques): static
+    {
+        $this->remarques = $remarques;
+        return $this;
+    }
 
-    public function getProprietaire(): ?Owner { return $this->proprietaire; }
-    public function setProprietaire(?Owner $proprietaire): static { $this->proprietaire = $proprietaire; return $this; }
+    public function getProprietaire(): ?Owner
+    {
+        return $this->proprietaire;
+    }
+    public function setProprietaire(?Owner $proprietaire): static
+    {
+        $this->proprietaire = $proprietaire;
+        return $this;
+    }
 
-    public function getCreatedBy(): ?User { return $this->createdBy; }
-    public function setCreatedBy(?User $createdBy): static { $this->createdBy = $createdBy; return $this; }
+    public function getCreatedBy(): ?User
+    {
+        return $this->createdBy;
+    }
+    public function setCreatedBy(?User $createdBy): static
+    {
+        $this->createdBy = $createdBy;
+        return $this;
+    }
 
-    public function getClinic(): ?Clinic { return $this->clinic; }
-    public function setClinic(?Clinic $clinic): static { $this->clinic = $clinic; return $this; }
+    public function getClinic(): ?Clinic
+    {
+        return $this->clinic;
+    }
+    public function setClinic(?Clinic $clinic): static
+    {
+        $this->clinic = $clinic;
+        return $this;
+    }
 
-    public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static { $this->createdAt = $createdAt; return $this; }
+    public function getCreatedAt(): ?\DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+        return $this;
+    }
 
     /** @return Collection<int, MedicalConsultation> */
-    public function getMedicalConsultations(): Collection { return $this->medicalConsultations; }
+    public function getMedicalConsultations(): Collection
+    {
+        return $this->medicalConsultations;
+    }
 
     public function addMedicalConsultation(MedicalConsultation $medicalConsultation): static
     {
