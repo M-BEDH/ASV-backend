@@ -133,12 +133,18 @@ final class MedicalConsultationApiController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
 
-        if (isset($data['motif'])) { $consultation->setMotif($data['motif']); }
+        if (isset($data['motif'])) {
+            $consultation->setMotif($data['motif']);
+        }
         if (isset($data['dateConsultation'])) {
             $consultation->setDateConsultation(new \DateTime($data['dateConsultation']));
         }
-        if (array_key_exists('compteRendu', $data)) { $consultation->setCompteRendu($data['compteRendu']); }
-        if (array_key_exists('traitements', $data)) { $consultation->setTraitements($data['traitements']); }
+        if (array_key_exists('compteRendu', $data)) {
+            $consultation->setCompteRendu($data['compteRendu']);
+        }
+        if (array_key_exists('traitements', $data)) {
+            $consultation->setTraitements($data['traitements']);
+        }
 
         if (array_key_exists('animalId', $data)) {
             if ($data['animalId'] === null) {
@@ -197,19 +203,19 @@ final class MedicalConsultationApiController extends AbstractController
     private function serialize(MedicalConsultation $c): array
     {
         return [
-            'id'               => $c->getId(),
+            'id' => $c->getId(),
             'dateConsultation' => $c->getDateConsultation()?->format('c'),
-            'motif'            => $c->getMotif(),
-            'compteRendu'      => $c->getCompteRendu(),
-            'traitements'      => $c->getTraitements(),
-            'clinicId'         => $c->getClinic()?->getId(),
-            'animal'           => $c->getAnimal() ? [
-                'id'     => $c->getAnimal()->getId(),
-                'nom'    => $c->getAnimal()->getNom(),
+            'motif' => $c->getMotif(),
+            'compteRendu' => $c->getCompteRendu(),
+            'traitements' => $c->getTraitements(),
+            'clinicId' => $c->getClinic()?->getId(),
+            'animal' => $c->getAnimal() ? [
+                'id' => $c->getAnimal()->getId(),
+                'nom' => $c->getAnimal()->getNom(),
                 'espece' => $c->getAnimal()->getEspece(),
             ] : null,
             'veterinaire' => $c->getVeterinaire() ? [
-                'id'   => $c->getVeterinaire()->getId(),
+                'id' => $c->getVeterinaire()->getId(),
                 'name' => $c->getVeterinaire()->getName(),
             ] : null,
             'createdAt' => $c->getCreatedAt()?->format('c'),

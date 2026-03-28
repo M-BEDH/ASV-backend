@@ -119,10 +119,18 @@ final class OwnerApiController extends AbstractController
         $me = $this->getUser();
         $data = json_decode($request->getContent(), true);
 
-        if (isset($data['nom'])) { $owner->setNom($data['nom']); }
-        if (isset($data['prenom'])) { $owner->setPrenom($data['prenom']); }
-        if (array_key_exists('adresse', $data)) { $owner->setAdresse($data['adresse']); }
-        if (array_key_exists('telephone', $data)) { $owner->setTelephone($data['telephone']); }
+        if (isset($data['nom'])) {
+            $owner->setNom($data['nom']);
+        }
+        if (isset($data['prenom'])) {
+            $owner->setPrenom($data['prenom']);
+        }
+        if (array_key_exists('adresse', $data)) {
+            $owner->setAdresse($data['adresse']);
+        }
+        if (array_key_exists('telephone', $data)) {
+            $owner->setTelephone($data['telephone']);
+        }
         if (array_key_exists('email', $data)) {
             $owner->setEmail($data['email']);
             if ($me->getRole() === 'client' && !empty($data['email']) && $data['email'] !== $me->getEmail()) {
@@ -156,15 +164,15 @@ final class OwnerApiController extends AbstractController
     private function serialize(Owner $o): array
     {
         return [
-            'id'        => $o->getId(),
-            'nom'       => $o->getNom(),
-            'prenom'    => $o->getPrenom(),
-            'adresse'   => $o->getAdresse(),
+            'id' => $o->getId(),
+            'nom' => $o->getNom(),
+            'prenom' => $o->getPrenom(),
+            'adresse' => $o->getAdresse(),
             'telephone' => $o->getTelephone(),
-            'email'     => $o->getEmail(),
-            'clinicId'  => $o->getClinic()?->getId(),
+            'email' => $o->getEmail(),
+            'clinicId' => $o->getClinic()?->getId(),
             'createdBy' => $o->getCreatedBy() ? [
-                'id'   => $o->getCreatedBy()->getId(),
+                'id' => $o->getCreatedBy()->getId(),
                 'name' => $o->getCreatedBy()->getName(),
             ] : null,
             'createdAt' => $o->getCreatedAt()?->format('c'),

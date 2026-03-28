@@ -104,10 +104,10 @@ final class AuthController extends AbstractController
             ->inc([$user->getRole()]);
 
         return $this->json([
-            'id'       => $user->getId(),
-            'email'    => $user->getEmail(),
-            'name'     => $user->getName(),
-            'role'     => $user->getRole(),
+            'id' => $user->getId(),
+            'email' => $user->getEmail(),
+            'name' => $user->getName(),
+            'role' => $user->getRole(),
             'clinicId' => $user->getClinic()?->getId(),
         ], 201);
     }
@@ -138,7 +138,7 @@ final class AuthController extends AbstractController
                 return $this->json([
                     'requiresClinicSelection' => true,
                     'clinics' => array_map(fn($u) => [
-                        'id'   => $u->getClinic()?->getId(),
+                        'id' => $u->getClinic()?->getId(),
                         'name' => $u->getClinic()?->getName() ?? 'Sans établissement',
                     ], $users),
                 ]);
@@ -157,12 +157,12 @@ final class AuthController extends AbstractController
 
         return $this->json([
             'token' => $jwtManager->create($user),
-            'user'  => [
-                'id'         => $user->getId(),
-                'email'      => $user->getEmail(),
-                'name'       => $user->getName(),
-                'role'       => $user->getRole(),
-                'clinicId'   => $user->getClinic()?->getId(),
+            'user' => [
+                'id' => $user->getId(),
+                'email' => $user->getEmail(),
+                'name' => $user->getName(),
+                'role' => $user->getRole(),
+                'clinicId' => $user->getClinic()?->getId(),
                 'clinicName' => $user->getClinic()?->getName(),
             ],
         ]);
@@ -175,11 +175,11 @@ final class AuthController extends AbstractController
         $user = $this->getUser();
 
         return $this->json([
-            'id'         => $user->getId(),
-            'email'      => $user->getEmail(),
-            'name'       => $user->getName(),
-            'role'       => $user->getRole(),
-            'clinicId'   => $user->getClinic()?->getId(),
+            'id' => $user->getId(),
+            'email' => $user->getEmail(),
+            'name' => $user->getName(),
+            'role' => $user->getRole(),
+            'clinicId' => $user->getClinic()?->getId(),
             'clinicName' => $user->getClinic()?->getName(),
         ]);
     }

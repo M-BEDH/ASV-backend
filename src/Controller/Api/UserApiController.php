@@ -108,10 +108,10 @@ final class UserApiController extends AbstractController
     private function serialize(User $u): array
     {
         return [
-            'id'        => $u->getId(),
-            'email'     => $u->getEmail(),
-            'name'      => $u->getName(),
-            'role'      => $u->getRole(),
+            'id' => $u->getId(),
+            'email' => $u->getEmail(),
+            'name' => $u->getName(),
+            'role' => $u->getRole(),
             'createdAt' => $u->getCreatedAt()?->format('c'),
         ];
     }

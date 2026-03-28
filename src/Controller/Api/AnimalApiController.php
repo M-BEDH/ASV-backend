@@ -127,10 +127,18 @@ final class AnimalApiController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
 
-        if (isset($data['nom'])) { $animal->setNom($data['nom']); }
-        if (isset($data['espece'])) { $animal->setEspece($data['espece']); }
-        if (array_key_exists('race', $data)) { $animal->setRace($data['race']); }
-        if (array_key_exists('remarques', $data)) { $animal->setRemarques($data['remarques']); }
+        if (isset($data['nom'])) {
+            $animal->setNom($data['nom']);
+        }
+        if (isset($data['espece'])) {
+            $animal->setEspece($data['espece']);
+        }
+        if (array_key_exists('race', $data)) {
+            $animal->setRace($data['race']);
+        }
+        if (array_key_exists('remarques', $data)) {
+            $animal->setRemarques($data['remarques']);
+        }
         if (array_key_exists('dateNaissance', $data)) {
             $animal->setDateNaissance($data['dateNaissance'] ? new \DateTime($data['dateNaissance']) : null);
         }
@@ -169,13 +177,13 @@ final class AnimalApiController extends AbstractController
         $consultations = $consultationRepo->findByAnimalWithVet($id);
 
         return $this->json(array_map(fn($c) => [
-            'id'              => $c->getId(),
+            'id' => $c->getId(),
             'dateConsultation' => $c->getDateConsultation()?->format('c'),
-            'motif'           => $c->getMotif(),
-            'compteRendu'     => $c->getCompteRendu(),
-            'traitements'     => $c->getTraitements(),
-            'veterinaire'     => $c->getVeterinaire() ? [
-                'id'   => $c->getVeterinaire()->getId(),
+            'motif' => $c->getMotif(),
+            'compteRendu' => $c->getCompteRendu(),
+            'traitements' => $c->getTraitements(),
+            'veterinaire' => $c->getVeterinaire() ? [
+                'id' => $c->getVeterinaire()->getId(),
                 'name' => $c->getVeterinaire()->getName(),
             ] : null,
         ], $consultations));
@@ -209,22 +217,22 @@ final class AnimalApiController extends AbstractController
     private function serialize(Animal $a): array
     {
         return [
-            'id'            => $a->getId(),
-            'nom'           => $a->getNom(),
-            'espece'        => $a->getEspece(),
-            'race'          => $a->getRace(),
+            'id' => $a->getId(),
+            'nom' => $a->getNom(),
+            'espece' => $a->getEspece(),
+            'race' => $a->getRace(),
             'dateNaissance' => $a->getDateNaissance()?->format('Y-m-d'),
-            'remarques'     => $a->getRemarques(),
-            'proprietaire'  => $a->getProprietaire() ? [
-                'id'     => $a->getProprietaire()->getId(),
-                'nom'    => $a->getProprietaire()->getNom(),
+            'remarques' => $a->getRemarques(),
+            'proprietaire' => $a->getProprietaire() ? [
+                'id' => $a->getProprietaire()->getId(),
+                'nom' => $a->getProprietaire()->getNom(),
                 'prenom' => $a->getProprietaire()->getPrenom(),
             ] : null,
             'createdBy' => $a->getCreatedBy() ? [
-                'id'   => $a->getCreatedBy()->getId(),
+                'id' => $a->getCreatedBy()->getId(),
                 'name' => $a->getCreatedBy()->getName(),
             ] : null,
-            'clinicId'  => $a->getClinic()?->getId(),
+            'clinicId' => $a->getClinic()?->getId(),
             'createdAt' => $a->getCreatedAt()?->format('c'),
         ];
     }
