@@ -48,6 +48,9 @@ final class UserApiController extends AbstractController
         if (empty($data['email']) || empty($data['name']) || empty($data['role'])) {
             return $this->json(['error' => 'Les champs email, name et role sont obligatoires.'], 400);
         }
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            return $this->json(['error' => "Format d'email invalide."], 400);
+        }
 
         $user = new User();
         $user->setEmail($data['email']);
@@ -73,6 +76,9 @@ final class UserApiController extends AbstractController
         $data = json_decode($request->getContent(), true);
 
         if (isset($data['email'])) {
+            if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                return $this->json(['error' => "Format d'email invalide."], 400);
+            }
             $user->setEmail($data['email']);
         }
         if (isset($data['name'])) {
