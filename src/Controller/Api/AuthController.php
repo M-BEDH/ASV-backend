@@ -21,7 +21,8 @@ final class AuthController extends AbstractController
 {
     public function __construct(
         private CollectorRegistry $registry,
-    ) {}
+    ) {
+    }
 
     #[Route('/register', methods: ['POST'])]
     public function register(
@@ -36,6 +37,9 @@ final class AuthController extends AbstractController
 
         if (empty($data['email']) || empty($data['password']) || empty($data['name']) || empty($data['role'])) {
             return $this->json(['error' => 'Les champs email, password, name et role sont obligatoires.'], 400);
+        }
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            return $this->json(['error' => "Format d'email invalide."], 400);
         }
 
         $allowedRoles = ['client', 'veterinaire', 'responsable', 'assistant', 'benevole'];
@@ -138,6 +142,9 @@ final class AuthController extends AbstractController
 
         if (empty($data['email']) || empty($data['password'])) {
             return $this->json(['error' => 'Email et password requis.'], 400);
+        }
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            return $this->json(['error' => "Format d'email invalide."], 400);
         }
 
         // Si un clinicId est fourni, on cherche directement le bon compte
