@@ -28,8 +28,8 @@ class Owner
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $telephone = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $email = null;
+    #[ORM\Column(length: 255, nullable: false)]
+    private string $email = '';
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'createdOwners')]
     #[ORM\JoinColumn(name: 'created_by', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
@@ -112,11 +112,11 @@ class Owner
         return $this;
     }
 
-    public function getEmail(): ?string
+    public function getEmail(): string
     {
         return $this->email;
     }
-    public function setEmail(?string $email): static
+    public function setEmail(string $email): static
     {
         $this->email = $email;
         return $this;
