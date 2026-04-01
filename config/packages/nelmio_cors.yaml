@@ -2,7 +2,7 @@ nelmio_cors:
     defaults:
         allow_origin: ['*']
         allow_methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-        allow_headers: ['Content-Type', 'Authorization', 'Access-Control-Request-Private-Network']
+        allow_headers: ['Content-Type', 'Authorization', 'Access-Control-Request-Private-Network', 'ngrok-skip-browser-warning']
         expose_headers: ['Access-Control-Allow-Private-Network']
         max_age: 86400
     paths:
