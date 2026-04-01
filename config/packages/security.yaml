@@ -19,6 +19,7 @@ security:
     access_control:
         - { path: ^/api/auth/login,    roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/register, roles: PUBLIC_ACCESS }
+        - { path: ^/api/clinics/by-email, roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api/clinics$,      roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api,               roles: IS_AUTHENTICATED_FULLY }
 
