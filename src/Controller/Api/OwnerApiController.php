@@ -63,8 +63,14 @@ final class OwnerApiController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
 
-        if (empty($data['nom']) || empty($data['prenom'])) {
-            return $this->json(['error' => 'Les champs nom et prenom sont obligatoires.'], 400);
+        if (empty($data['nom']) || empty($data['prenom']) || empty($data['email'])) {
+            return $this->json(['error' => 'Les champs nom, prenom et email sont obligatoires.'], 400);
+        }
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            return $this->json(['error' => "Format d'email invalide."], 400);
+        }
+        if (!empty($data['telephone']) && !preg_match('/^[0-9 .+\-()]{7,20}$/', $data['telephone'])) {
+            return $this->json(['error' => "Format de téléphone invalide."], 400);
         }
 
         $owner = new Owner();
@@ -72,7 +78,7 @@ final class OwnerApiController extends AbstractController
         $owner->setPrenom($data['prenom']);
         $owner->setAdresse($data['adresse'] ?? null);
         $owner->setTelephone($data['telephone'] ?? null);
-        $owner->setEmail($data['email'] ?? null);
+        $owner->setEmail($data['email']);
         $owner->setCreatedBy($me);
 
         if ($me->getRole() === 'client') {
@@ -148,9 +154,15 @@ final class OwnerApiController extends AbstractController
             $owner->setAdresse($data['adresse']);
         }
         if (array_key_exists('telephone', $data)) {
+            if (!empty($data['telephone']) && !preg_match('/^[0-9 .+\-()]{7,20}$/', $data['telephone'])) {
+                return $this->json(['error' => "Format de téléphone invalide."], 400);
+            }
             $owner->setTelephone($data['telephone']);
         }
         if (array_key_exists('email', $data)) {
+            if (empty($data['email']) || !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                return $this->json(['error' => "Format d'email invalide."], 400);
+            }
             $owner->setEmail($data['email']);
             if ($me->getRole() === 'client' && !empty($data['email']) && $data['email'] !== $me->getEmail()) {
                 $me->setEmail($data['email']);
