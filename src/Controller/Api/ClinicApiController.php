@@ -10,6 +10,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Repository\OwnerRepository;
 
 #[Route('/api/clinics')]
 final class ClinicApiController extends AbstractController
@@ -26,6 +27,37 @@ final class ClinicApiController extends AbstractController
             'type' => $c->getType(),
             'createdAt' => $c->getCreatedAt()?->format('Y-m-d H:i:s'),
         ], $clinics));
+    }
+
+    // Public: trouve les cliniques où cet email est owner (pour l'inscription client)
+    #[Route('/by-email', methods: ['GET'])]
+    public function byEmail(Request $request, OwnerRepository $ownerRepo): JsonResponse
+    {
+        $email = $request->query->get('email');
+
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return $this->json(['error' => "Email invalide."], 400);
+        }
+
+        $owners = $ownerRepo->findBy(['email' => $email]);
+
+        if (empty($owners)) {
+            return $this->json(['found' => false, 'clinics' => []]);
+        }
+
+        $clinics = [];
+        foreach ($owners as $owner) {
+            $clinic = $owner->getClinic();
+            if ($clinic !== null) {
+                $clinics[] = [
+                    'id' => $clinic->getId(),
+                    'name' => $clinic->getName(),
+                    'type' => $clinic->getType(),
+                ];
+            }
+        }
+
+        return $this->json(['found' => true, 'clinics' => $clinics]);
     }
 
     // Authenticated: get a single clinic
