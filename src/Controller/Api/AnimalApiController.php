@@ -7,6 +7,7 @@ use App\Entity\User;
 use App\Repository\AnimalRepository;
 use App\Repository\MedicalConsultationRepository;
 use App\Repository\OwnerRepository;
+use App\Service\SerializerService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -16,8 +17,10 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/animals')]
 final class AnimalApiController extends AbstractController
 {
+    use ClinicAccessTrait;
+
     #[Route('', methods: ['GET'])]
-    public function index(AnimalRepository $repo, OwnerRepository $ownerRepo): JsonResponse
+    public function index(AnimalRepository $repo, OwnerRepository $ownerRepo, SerializerService $serializer): JsonResponse
     {
         /** @var User $me */
         $me = $this->getUser();
@@ -28,7 +31,7 @@ final class AnimalApiController extends AbstractController
                 return $this->json([]);
             }
             $animals = $repo->findBy(['proprietaire' => $owner]);
-            return $this->json(array_map(fn($a) => $this->serialize($a), $animals));
+            return $this->json(array_map(fn($a) => $serializer->serializeAnimal($a), $animals));
         }
 
         $clinic = $me->getClinic();
@@ -36,24 +39,22 @@ final class AnimalApiController extends AbstractController
             ? $repo->findBy(['clinic' => $clinic])
             : $repo->findBy(['clinic' => null]);
 
-        return $this->json(array_map(fn($a) => $this->serialize($a), $animals));
+        return $this->json(array_map(fn($a) => $serializer->serializeAnimal($a), $animals));
     }
 
     #[Route('/{id}', methods: ['GET'])]
-    public function show(string $id, AnimalRepository $repo): JsonResponse
+    public function show(string $id, AnimalRepository $repo, SerializerService $serializer): JsonResponse
     {
         $animal = $repo->find($id);
         if (!$animal) {
             return $this->json(['error' => 'Animal introuvable.'], 404);
         }
 
-        /** @var User $me */
-        $me = $this->getUser();
-        if ($animal->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if (!$this->memeClinic($animal)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
-        return $this->json($this->serialize($animal));
+        return $this->json($serializer->serializeAnimal($animal));
     }
 
     #[Route('', methods: ['POST'])]
@@ -61,6 +62,7 @@ final class AnimalApiController extends AbstractController
         Request $request,
         EntityManagerInterface $em,
         OwnerRepository $ownerRepo,
+        SerializerService $serializer,
     ): JsonResponse {
         /** @var User $me */
         $me = $this->getUser();
@@ -98,7 +100,7 @@ final class AnimalApiController extends AbstractController
         $em->persist($animal);
         $em->flush();
 
-        return $this->json($this->serialize($animal), 201);
+        return $this->json($serializer->serializeAnimal($animal), 201);
     }
 
     #[Route('/{id}', methods: ['PUT'])]
@@ -108,6 +110,7 @@ final class AnimalApiController extends AbstractController
         AnimalRepository $repo,
         EntityManagerInterface $em,
         OwnerRepository $ownerRepo,
+        SerializerService $serializer,
     ): JsonResponse {
         /** @var User $me */
         $me = $this->getUser();
@@ -121,7 +124,7 @@ final class AnimalApiController extends AbstractController
             return $this->json(['error' => 'Animal introuvable.'], 404);
         }
 
-        if ($animal->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if (!$this->memeClinic($animal)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -157,7 +160,7 @@ final class AnimalApiController extends AbstractController
 
         $em->flush();
 
-        return $this->json($this->serialize($animal));
+        return $this->json($serializer->serializeAnimal($animal));
     }
 
     #[Route('/{id}/consultations', methods: ['GET'])]
@@ -170,7 +173,7 @@ final class AnimalApiController extends AbstractController
 
         /** @var User $me */
         $me = $this->getUser();
-        if ($me->getRole() !== 'client' && $animal->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if ($me->getRole() !== 'client' && !$this->memeClinic($animal)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -204,7 +207,7 @@ final class AnimalApiController extends AbstractController
             return $this->json(['error' => 'Animal introuvable.'], 404);
         }
 
-        if ($animal->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if (!$this->memeClinic($animal)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -214,26 +217,4 @@ final class AnimalApiController extends AbstractController
         return $this->json(null, 204);
     }
 
-    private function serialize(Animal $a): array
-    {
-        return [
-            'id' => $a->getId(),
-            'nom' => $a->getNom(),
-            'espece' => $a->getEspece(),
-            'race' => $a->getRace(),
-            'dateNaissance' => $a->getDateNaissance()?->format('Y-m-d'),
-            'remarques' => $a->getRemarques(),
-            'proprietaire' => $a->getProprietaire() ? [
-                'id' => $a->getProprietaire()->getId(),
-                'nom' => $a->getProprietaire()->getNom(),
-                'prenom' => $a->getProprietaire()->getPrenom(),
-            ] : null,
-            'createdBy' => $a->getCreatedBy() ? [
-                'id' => $a->getCreatedBy()->getId(),
-                'name' => $a->getCreatedBy()->getName(),
-            ] : null,
-            'clinicId' => $a->getClinic()?->getId(),
-            'createdAt' => $a->getCreatedAt()?->format('c'),
-        ];
-    }
 }
