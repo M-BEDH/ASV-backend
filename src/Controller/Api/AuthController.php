@@ -5,8 +5,10 @@ namespace App\Controller\Api;
 use App\Entity\Clinic;
 use App\Entity\User;
 use App\Repository\ClinicRepository;
-use App\Repository\OwnerRepository;
 use App\Repository\UserRepository;
+use App\Constant\RoleConstants;
+use App\Service\ApiValidator;
+use App\Service\UserOwnerLinkingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Prometheus\CollectorRegistry;
@@ -31,19 +33,16 @@ final class AuthController extends AbstractController
         UserPasswordHasherInterface $hasher,
         UserRepository $userRepo,
         ClinicRepository $clinicRepo,
-        OwnerRepository $ownerRepo,
+        ApiValidator $validator,
+        UserOwnerLinkingService $linking,
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
-        if (empty($data['email']) || empty($data['password']) || empty($data['name']) || empty($data['role'])) {
-            return $this->json(['error' => 'Les champs email, password, name et role sont obligatoires.'], 400);
-        }
-        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            return $this->json(['error' => "Format d'email invalide."], 400);
+        if ($error = $validator->validateUserCreate($data)) {
+            return $this->json(['error' => $error], 400);
         }
 
-        $allowedRoles = ['client', 'veterinaire', 'responsable', 'assistant', 'benevole'];
-        if (!in_array($data['role'], $allowedRoles, true)) {
+        if (!in_array($data['role'], RoleConstants::ALL, true)) {
             return $this->json(['error' => 'Rôle invalide. Valeurs acceptées : client, veterinaire, responsable, assistant, benevole.'], 400);
         }
 
@@ -109,14 +108,9 @@ final class AuthController extends AbstractController
         }
 
         // Lier le user à un owner existant (même email + même clinique)
-        if ($data['role'] === 'client' && $clinic !== null) {
-            $existingOwner = $ownerRepo->findOneBy(['email' => $data['email'], 'clinic' => $clinic]);
-            if ($existingOwner && $existingOwner->getUser() === null) {
-                $existingOwner->setUser($user);
-                $em->flush();
-            }
-        }
+        $linking->linkUserToOwner($user, $clinic, $em);
 
+        // Prometheus : incrémente le compteur d'inscriptions par rôle (affiché dans Grafana)
         $this->registry
             ->getOrRegisterCounter('asv', 'user_register_total', 'Nombre d\'inscriptions', ['role'])
             ->inc([$user->getRole()]);
@@ -172,6 +166,7 @@ final class AuthController extends AbstractController
             return $this->json(['error' => 'Identifiants invalides.'], 401);
         }
 
+        // Prometheus : incrémente le compteur de connexions réussies par rôle (affiché dans Grafana)
         $this->registry
             ->getOrRegisterCounter('asv', 'user_login_total', 'Nombre de connexions réussies', ['role'])
             ->inc([$user->getRole()]);
