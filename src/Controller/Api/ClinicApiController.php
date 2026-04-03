@@ -2,6 +2,7 @@
 
 namespace App\Controller\Api;
 
+use App\Constant\RoleConstants;
 use App\Entity\Clinic;
 use App\Entity\User;
 use App\Repository\ClinicRepository;
@@ -11,22 +12,18 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Repository\OwnerRepository;
+use App\Service\SerializerService;
 
 #[Route('/api/clinics')]
 final class ClinicApiController extends AbstractController
 {
     // Public: list clinics (for registration dropdown)
     #[Route('', methods: ['GET'])]
-    public function list(ClinicRepository $repo): JsonResponse
+    public function list(ClinicRepository $repo, SerializerService $serializer): JsonResponse
     {
         $clinics = $repo->findBy([], ['name' => 'ASC']);
 
-        return $this->json(array_map(fn(Clinic $c) => [
-            'id' => $c->getId(),
-            'name' => $c->getName(),
-            'type' => $c->getType(),
-            'createdAt' => $c->getCreatedAt()?->format('Y-m-d H:i:s'),
-        ], $clinics));
+        return $this->json(array_map(fn(Clinic $c) => $serializer->serializeClinic($c), $clinics));
     }
 
     // Public: trouve les cliniques où cet email est owner (pour l'inscription client)
@@ -62,7 +59,7 @@ final class ClinicApiController extends AbstractController
 
     // Authenticated: get a single clinic
     #[Route('/{id}', methods: ['GET'])]
-    public function show(string $id, ClinicRepository $repo): JsonResponse
+    public function show(string $id, ClinicRepository $repo, SerializerService $serializer): JsonResponse
     {
         $clinic = $repo->find($id);
         if (!$clinic) {
@@ -75,17 +72,12 @@ final class ClinicApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
-        return $this->json([
-            'id' => $clinic->getId(),
-            'name' => $clinic->getName(),
-            'type' => $clinic->getType(),
-            'createdAt' => $clinic->getCreatedAt()?->format('Y-m-d H:i:s'),
-        ]);
+        return $this->json($serializer->serializeClinic($clinic));
     }
 
     // Authenticated (vet/assistant): update clinic name
     #[Route('/{id}', methods: ['PUT'])]
-    public function update(string $id, Request $request, ClinicRepository $repo, EntityManagerInterface $em): JsonResponse
+    public function update(string $id, Request $request, ClinicRepository $repo, EntityManagerInterface $em, SerializerService $serializer): JsonResponse
     {
         $clinic = $repo->find($id);
         if (!$clinic) {
@@ -98,7 +90,7 @@ final class ClinicApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
-        if (!in_array($me->getRole(), ['responsable', 'veterinaire'], true)) {
+        if (!in_array($me->getRole(), RoleConstants::CAN_EDIT_CLINIC, true)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -109,11 +101,6 @@ final class ClinicApiController extends AbstractController
 
         $em->flush();
 
-        return $this->json([
-            'id' => $clinic->getId(),
-            'name' => $clinic->getName(),
-            'type' => $clinic->getType(),
-            'createdAt' => $clinic->getCreatedAt()?->format('Y-m-d H:i:s'),
-        ]);
+        return $this->json($serializer->serializeClinic($clinic));
     }
 }

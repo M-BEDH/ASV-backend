@@ -8,6 +8,7 @@ use App\Repository\AnimalRepository;
 use App\Repository\MedicalConsultationRepository;
 use App\Repository\OwnerRepository;
 use App\Repository\UserRepository;
+use App\Service\SerializerService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -17,8 +18,10 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/consultations')]
 final class MedicalConsultationApiController extends AbstractController
 {
+    use ClinicAccessTrait;
+
     #[Route('', methods: ['GET'])]
-    public function index(MedicalConsultationRepository $repo, OwnerRepository $ownerRepo): JsonResponse
+    public function index(MedicalConsultationRepository $repo, OwnerRepository $ownerRepo, SerializerService $serializer): JsonResponse
     {
         /** @var User $me */
         $me = $this->getUser();
@@ -29,30 +32,28 @@ final class MedicalConsultationApiController extends AbstractController
                 return $this->json([]);
             }
             $consultations = $repo->findByOwnerWithRelations($owner->getId());
-            return $this->json(array_map(fn($c) => $this->serialize($c), $consultations));
+            return $this->json(array_map(fn($c) => $serializer->serializeConsultation($c), $consultations));
         }
 
         $clinic = $me->getClinic();
         $consultations = $repo->findByClinicWithRelations($clinic?->getId());
 
-        return $this->json(array_map(fn($c) => $this->serialize($c), $consultations));
+        return $this->json(array_map(fn($c) => $serializer->serializeConsultation($c), $consultations));
     }
 
     #[Route('/{id}', methods: ['GET'])]
-    public function show(string $id, MedicalConsultationRepository $repo): JsonResponse
+    public function show(string $id, MedicalConsultationRepository $repo, SerializerService $serializer): JsonResponse
     {
         $consultation = $repo->find($id);
         if (!$consultation) {
             return $this->json(['error' => 'Consultation introuvable.'], 404);
         }
 
-        /** @var User $me */
-        $me = $this->getUser();
-        if ($consultation->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if (!$this->memeClinic($consultation)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
-        return $this->json($this->serialize($consultation));
+        return $this->json($serializer->serializeConsultation($consultation));
     }
 
     #[Route('', methods: ['POST'])]
@@ -61,6 +62,7 @@ final class MedicalConsultationApiController extends AbstractController
         EntityManagerInterface $em,
         AnimalRepository $animalRepo,
         UserRepository $userRepo,
+        SerializerService $serializer,
     ): JsonResponse {
         /** @var User $me */
         $me = $this->getUser();
@@ -103,7 +105,7 @@ final class MedicalConsultationApiController extends AbstractController
         $em->persist($consultation);
         $em->flush();
 
-        return $this->json($this->serialize($consultation), 201);
+        return $this->json($serializer->serializeConsultation($consultation), 201);
     }
 
     #[Route('/{id}', methods: ['PUT'])]
@@ -114,6 +116,7 @@ final class MedicalConsultationApiController extends AbstractController
         EntityManagerInterface $em,
         AnimalRepository $animalRepo,
         UserRepository $userRepo,
+        SerializerService $serializer,
     ): JsonResponse {
         $consultation = $repo->find($id);
         if (!$consultation) {
@@ -127,7 +130,7 @@ final class MedicalConsultationApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
-        if ($consultation->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if (!$this->memeClinic($consultation)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -172,7 +175,7 @@ final class MedicalConsultationApiController extends AbstractController
 
         $em->flush();
 
-        return $this->json($this->serialize($consultation));
+        return $this->json($serializer->serializeConsultation($consultation));
     }
 
     #[Route('/{id}', methods: ['DELETE'])]
@@ -190,7 +193,7 @@ final class MedicalConsultationApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
-        if ($consultation->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if (!$this->memeClinic($consultation)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -200,25 +203,4 @@ final class MedicalConsultationApiController extends AbstractController
         return $this->json(null, 204);
     }
 
-    private function serialize(MedicalConsultation $c): array
-    {
-        return [
-            'id' => $c->getId(),
-            'dateConsultation' => $c->getDateConsultation()?->format('c'),
-            'motif' => $c->getMotif(),
-            'compteRendu' => $c->getCompteRendu(),
-            'traitements' => $c->getTraitements(),
-            'clinicId' => $c->getClinic()?->getId(),
-            'animal' => $c->getAnimal() ? [
-                'id' => $c->getAnimal()->getId(),
-                'nom' => $c->getAnimal()->getNom(),
-                'espece' => $c->getAnimal()->getEspece(),
-            ] : null,
-            'veterinaire' => $c->getVeterinaire() ? [
-                'id' => $c->getVeterinaire()->getId(),
-                'name' => $c->getVeterinaire()->getName(),
-            ] : null,
-            'createdAt' => $c->getCreatedAt()?->format('c'),
-        ];
-    }
 }

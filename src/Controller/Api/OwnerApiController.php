@@ -5,7 +5,9 @@ namespace App\Controller\Api;
 use App\Entity\Owner;
 use App\Entity\User;
 use App\Repository\OwnerRepository;
-use App\Repository\UserRepository;
+use App\Service\ApiValidator;
+use App\Service\SerializerService;
+use App\Service\UserOwnerLinkingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -16,14 +18,14 @@ use Symfony\Component\Routing\Attribute\Route;
 final class OwnerApiController extends AbstractController
 {
     #[Route('', methods: ['GET'])]
-    public function index(OwnerRepository $repo): JsonResponse
+    public function index(OwnerRepository $repo, SerializerService $serializer): JsonResponse
     {
         /** @var User $me */
         $me = $this->getUser();
 
         if ($me->getRole() === 'client') {
             $owners = $repo->findBy(['user' => $me]);
-            return $this->json(array_map(fn($o) => $this->serialize($o), $owners));
+            return $this->json(array_map(fn($o) => $serializer->serializeOwner($o), $owners));
         }
 
         $clinic = $me->getClinic();
@@ -31,11 +33,11 @@ final class OwnerApiController extends AbstractController
             ? $repo->findBy(['clinic' => $clinic])
             : $repo->findBy(['clinic' => null]);
 
-        return $this->json(array_map(fn($o) => $this->serialize($o), $owners));
+        return $this->json(array_map(fn($o) => $serializer->serializeOwner($o), $owners));
     }
 
     #[Route('/{id}', methods: ['GET'])]
-    public function show(string $id, OwnerRepository $repo): JsonResponse
+    public function show(string $id, OwnerRepository $repo, SerializerService $serializer): JsonResponse
     {
         $owner = $repo->find($id);
         if (!$owner) {
@@ -48,29 +50,25 @@ final class OwnerApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
-        return $this->json($this->serialize($owner));
+        return $this->json($serializer->serializeOwner($owner));
     }
 
     #[Route('', methods: ['POST'])]
     public function create(
         Request $request,
         EntityManagerInterface $em,
-        UserRepository $userRepo,
         OwnerRepository $ownerRepo,
+        ApiValidator $validator,
+        SerializerService $serializer,
+        UserOwnerLinkingService $linking,
     ): JsonResponse {
         /** @var User $me */
         $me = $this->getUser();
 
         $data = json_decode($request->getContent(), true);
 
-        if (empty($data['nom']) || empty($data['prenom']) || empty($data['email'])) {
-            return $this->json(['error' => 'Les champs nom, prenom et email sont obligatoires.'], 400);
-        }
-        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            return $this->json(['error' => "Format d'email invalide."], 400);
-        }
-        if (!empty($data['telephone']) && !preg_match('/^[0-9 .+\-()]{7,20}$/', $data['telephone'])) {
-            return $this->json(['error' => "Format de téléphone invalide."], 400);
+        if ($error = $validator->validateOwnerCreate($data, $me->getClinic())) {
+            return $this->json(['error' => $error], 400);
         }
 
         $owner = new Owner();
@@ -98,18 +96,13 @@ final class OwnerApiController extends AbstractController
             $owner->setClinic($clinic);
 
             // Lier un user client existant (même email + même clinique)
-            if (!empty($data['email']) && $clinic !== null) {
-                $existingUser = $userRepo->findOneBy(['email' => $data['email'], 'clinic' => $clinic]);
-                if ($existingUser !== null && $existingUser->getRole() === 'client') {
-                    $owner->setUser($existingUser);
-                }
-            }
+            $linking->linkOwnerToUser($owner, $clinic);
         }
 
         $em->persist($owner);
         $em->flush();
 
-        return $this->json($this->serialize($owner), 201);
+        return $this->json($serializer->serializeOwner($owner), 201);
     }
 
     private function canAccess(Owner $owner): bool
@@ -120,7 +113,6 @@ final class OwnerApiController extends AbstractController
         if ($me->getRole() === 'client') {
             return $owner->getUser()?->getId() === $me->getId();
         }
-
         return $owner->getClinic()?->getId() === $me->getClinic()?->getId();
     }
 
@@ -130,6 +122,8 @@ final class OwnerApiController extends AbstractController
         Request $request,
         OwnerRepository $repo,
         EntityManagerInterface $em,
+        ApiValidator $validator,
+        SerializerService $serializer,
     ): JsonResponse {
         $owner = $repo->find($id);
         if (!$owner) {
@@ -144,6 +138,10 @@ final class OwnerApiController extends AbstractController
         $me = $this->getUser();
         $data = json_decode($request->getContent(), true);
 
+        if ($error = $validator->validateOwnerUpdate($data, $owner)) {
+            return $this->json(['error' => $error], 400);
+        }
+
         if (isset($data['nom'])) {
             $owner->setNom($data['nom']);
         }
@@ -154,24 +152,18 @@ final class OwnerApiController extends AbstractController
             $owner->setAdresse($data['adresse']);
         }
         if (array_key_exists('telephone', $data)) {
-            if (!empty($data['telephone']) && !preg_match('/^[0-9 .+\-()]{7,20}$/', $data['telephone'])) {
-                return $this->json(['error' => "Format de téléphone invalide."], 400);
-            }
             $owner->setTelephone($data['telephone']);
         }
         if (array_key_exists('email', $data)) {
-            if (empty($data['email']) || !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-                return $this->json(['error' => "Format d'email invalide."], 400);
-            }
             $owner->setEmail($data['email']);
-            if ($me->getRole() === 'client' && !empty($data['email']) && $data['email'] !== $me->getEmail()) {
+            if ($me->getRole() === 'client' && $data['email'] !== $me->getEmail()) {
                 $me->setEmail($data['email']);
             }
         }
 
         $em->flush();
 
-        return $this->json($this->serialize($owner));
+        return $this->json($serializer->serializeOwner($owner));
     }
 
     #[Route('/{id}', methods: ['DELETE'])]
@@ -190,23 +182,5 @@ final class OwnerApiController extends AbstractController
         $em->flush();
 
         return $this->json(null, 204);
-    }
-
-    private function serialize(Owner $o): array
-    {
-        return [
-            'id' => $o->getId(),
-            'nom' => $o->getNom(),
-            'prenom' => $o->getPrenom(),
-            'adresse' => $o->getAdresse(),
-            'telephone' => $o->getTelephone(),
-            'email' => $o->getEmail(),
-            'clinicId' => $o->getClinic()?->getId(),
-            'createdBy' => $o->getCreatedBy() ? [
-                'id' => $o->getCreatedBy()->getId(),
-                'name' => $o->getCreatedBy()->getName(),
-            ] : null,
-            'createdAt' => $o->getCreatedAt()?->format('c'),
-        ];
     }
 }

@@ -2,8 +2,10 @@
 
 namespace App\Controller\Api;
 
+use App\Constant\RoleConstants;
 use App\Entity\User;
 use App\Repository\UserRepository;
+use App\Service\SerializerService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -13,8 +15,10 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/users')]
 final class UserApiController extends AbstractController
 {
+    use ClinicAccessTrait;
+
     #[Route('', methods: ['GET'])]
-    public function index(UserRepository $repo): JsonResponse
+    public function index(UserRepository $repo, SerializerService $serializer): JsonResponse
     {
         /** @var \App\Entity\User $me */
         $me = $this->getUser();
@@ -24,24 +28,21 @@ final class UserApiController extends AbstractController
             ? $repo->findBy(['clinic' => $clinic])
             : $repo->findBy(['clinic' => null]);
 
-        return $this->json(array_map(fn($u) => $this->serialize($u), $users));
+        return $this->json(array_map(fn($u) => $serializer->serializeUser($u), $users));
     }
 
     #[Route('/{id}', methods: ['GET'])]
-    public function show(User $user): JsonResponse
+    public function show(User $user, SerializerService $serializer): JsonResponse
     {
-        /** @var \App\Entity\User $me */
-        $me = $this->getUser();
-
-        if ($user->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if (!$this->memeClinic($user)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
-        return $this->json($this->serialize($user));
+        return $this->json($serializer->serializeUser($user));
     }
 
     #[Route('', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $em): JsonResponse
+    public function create(Request $request, EntityManagerInterface $em, SerializerService $serializer): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
 
@@ -60,20 +61,21 @@ final class UserApiController extends AbstractController
         $em->persist($user);
         $em->flush();
 
-        return $this->json($this->serialize($user), 201);
+        return $this->json($serializer->serializeUser($user), 201);
     }
 
     #[Route('/{id}', methods: ['PUT'])]
-    public function update(Request $request, User $user, EntityManagerInterface $em): JsonResponse
+    public function update(Request $request, User $user, EntityManagerInterface $em, SerializerService $serializer): JsonResponse
     {
-        /** @var \App\Entity\User $me */
-        $me = $this->getUser();
-
-        if ($user->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if (!$this->memeClinic($user)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
         $data = json_decode($request->getContent(), true);
+
+        if (isset($data['role'])) {
+            return $this->json(['error' => 'Le rôle ne peut pas être modifié après l\'inscription.'], 400);
+        }
 
         if (isset($data['email'])) {
             if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
@@ -84,11 +86,10 @@ final class UserApiController extends AbstractController
         if (isset($data['name'])) {
             $user->setName($data['name']);
         }
-        // Le rôle n'est pas modifiable après l'inscription
 
         $em->flush();
 
-        return $this->json($this->serialize($user));
+        return $this->json($serializer->serializeUser($user));
     }
 
     #[Route('/{id}', methods: ['DELETE'])]
@@ -97,11 +98,11 @@ final class UserApiController extends AbstractController
         /** @var \App\Entity\User $me */
         $me = $this->getUser();
 
-        if (!in_array($me->getRole(), ['responsable', 'veterinaire', 'assistant'], true)) {
+        if (!in_array($me->getRole(), RoleConstants::CAN_DELETE_USER, true)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
-        if ($user->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if (!$this->memeClinic($user)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -111,14 +112,4 @@ final class UserApiController extends AbstractController
         return $this->json(null, 204);
     }
 
-    private function serialize(User $u): array
-    {
-        return [
-            'id' => $u->getId(),
-            'email' => $u->getEmail(),
-            'name' => $u->getName(),
-            'role' => $u->getRole(),
-            'createdAt' => $u->getCreatedAt()?->format('c'),
-        ];
-    }
 }
