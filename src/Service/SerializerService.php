@@ -84,6 +84,41 @@ class SerializerService
         ];
     }
 
+    //Prometheus : sérialise les données d'un utilisateur pour l'enregistrement et l'affichage dans Grafana
+    public function serializeRegisterResponseUser(User $u): array
+    {
+        return [
+            'id' => $u->getId(),
+            'email' => $u->getEmail(),
+            'name' => $u->getName(),
+            'role' => $u->getRole(),
+            'clinicId' => $u->getClinic()?->getId(),
+        ];
+    }
+
+    // Prometheus : sérialise les données d'un utilisateur pour la réponse de connexion et l'affichage dans Grafana
+    public function serializeLoginResponseUser(User $u): array
+    {
+        return [
+            'id' => $u->getId(),
+            'email' => $u->getEmail(),
+            'name' => $u->getName(),
+            'role' => $u->getRole(),
+            'clinicId' => $u->getClinic()?->getId(),
+            'clinicName' => $u->getClinic()?->getName(),
+        ];
+    }
+
+    // Prometheus : sérialise les données d'un utilisateur pour la réponse de connexion réussie et l'affichage dans Grafana
+    public function serializeLoginSuccessResponse(User $u, string $token): array
+    {
+        return [
+            'token' => $token,
+            'user' => $this->serializeLoginResponseUser($u),
+        ];
+    }
+
+    
     public function serializeClinic(Clinic $c): array
     {
         return [
