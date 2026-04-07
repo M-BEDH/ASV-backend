@@ -8,6 +8,7 @@ use App\Repository\ClinicRepository;
 use App\Repository\UserRepository;
 use App\Constant\RoleConstants;
 use App\Service\ApiValidator;
+use App\Service\SerializerService;
 use App\Service\UserOwnerLinkingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -22,7 +23,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class AuthController extends AbstractController
 {
     public function __construct(
-        private CollectorRegistry $registry,
+        private CollectorRegistry $prometheusRegistry,
     ) {
     }
 
@@ -35,6 +36,7 @@ final class AuthController extends AbstractController
         ClinicRepository $clinicRepo,
         ApiValidator $validator,
         UserOwnerLinkingService $linking,
+        SerializerService $serializer,
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
@@ -60,7 +62,7 @@ final class AuthController extends AbstractController
         $clinic = null;
         if ($data['role'] === 'veterinaire' || $data['role'] === 'responsable') {
             if (!empty($data['clinicName'])) {
-                // Create a new établissement
+                  // crée un nouvel établissement
                 $clinic = new Clinic();
                 $clinic->setName($data['clinicName']);
                 if (!empty($data['clinicType']) && in_array($data['clinicType'], $allowedTypes, true)) {
@@ -68,13 +70,14 @@ final class AuthController extends AbstractController
                 }
                 $em->persist($clinic);
             } elseif (!empty($data['clinicId'])) {
-                // Join an existing établissement
+                   // rejoint un établissement existant
                 $clinic = $clinicRepo->find($data['clinicId']);
                 if (!$clinic) {
                     return $this->json(['error' => 'Établissement introuvable.'], 404);
                 }
+            } else {
+                return $this->json(['error' => 'Un vétérinaire ou responsable doit créer ou rejoindre un établissement.'], 400);
             }
-            // No établissement provided: allowed (vet can add it later)
         } elseif ($data['role'] === 'assistant' || $data['role'] === 'benevole') {
             if (empty($data['clinicId'])) {
                 return $this->json(['error' => 'Un assistant ou bénévole doit rejoindre un établissement existant (clinicId requis).'], 400);
@@ -111,17 +114,11 @@ final class AuthController extends AbstractController
         $linking->linkUserToOwner($user, $clinic, $em);
 
         // Prometheus : incrémente le compteur d'inscriptions par rôle (affiché dans Grafana)
-        $this->registry
+        $this->prometheusRegistry
             ->getOrRegisterCounter('asv', 'user_register_total', 'Nombre d\'inscriptions', ['role'])
             ->inc([$user->getRole()]);
 
-        return $this->json([
-            'id' => $user->getId(),
-            'email' => $user->getEmail(),
-            'name' => $user->getName(),
-            'role' => $user->getRole(),
-            'clinicId' => $user->getClinic()?->getId(),
-        ], 201);
+        return $this->json($serializer->serializeRegisterResponseUser($user), 201);
     }
 
     #[Route('/login', methods: ['POST'])]
@@ -131,6 +128,7 @@ final class AuthController extends AbstractController
         ClinicRepository $clinicRepo,
         UserPasswordHasherInterface $hasher,
         JWTTokenManagerInterface $jwtManager,
+        SerializerService $serializer,
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
@@ -167,21 +165,11 @@ final class AuthController extends AbstractController
         }
 
         // Prometheus : incrémente le compteur de connexions réussies par rôle (affiché dans Grafana)
-        $this->registry
+        $this->prometheusRegistry
             ->getOrRegisterCounter('asv', 'user_login_total', 'Nombre de connexions réussies', ['role'])
             ->inc([$user->getRole()]);
 
-        return $this->json([
-            'token' => $jwtManager->create($user),
-            'user' => [
-                'id' => $user->getId(),
-                'email' => $user->getEmail(),
-                'name' => $user->getName(),
-                'role' => $user->getRole(),
-                'clinicId' => $user->getClinic()?->getId(),
-                'clinicName' => $user->getClinic()?->getName(),
-            ],
-        ]);
+        return $this->json($serializer->serializeLoginSuccessResponse($user, $jwtManager->create($user)));
     }
 
     #[Route('/me', methods: ['GET'])]
