@@ -3,7 +3,7 @@
 namespace App\Service;
 
 use App\Entity\Clinic;
-use App\Entity\Owner;
+// use App\Entity\Owner;
 use App\Entity\User;
 use App\Repository\OwnerRepository;
 use App\Repository\UserRepository;
@@ -32,15 +32,15 @@ class UserOwnerLinkingService
     }
 
     // Appelé à la création d'un Owner par un véto : relie l'Owner à un User client existant
-    public function linkOwnerToUser(Owner $owner, ?Clinic $clinic): void
-    {
-        if ($clinic === null || $owner->getEmail() === null) {
-            return;
-        }
+    // public function linkOwnerToUser(Owner $owner, ?Clinic $clinic): void
+    // {
+    //     if ($clinic === null || $owner->getEmail() === null) {
+    //         return;
+    //     }
 
-        $user = $this->userRepo->findOneBy(['email' => $owner->getEmail(), 'clinic' => $clinic]);
-        if ($user !== null && $user->getRole() === 'client') {
-            $owner->setUser($user);
-        }
-    }
+    //     $user = $this->userRepo->findOneBy(['email' => $owner->getEmail(), 'clinic' => $clinic]);
+    //     if ($user !== null && $user->getRole() === 'client') {
+    //         $owner->setUser($user);
+    //     }
+    // }
 }
