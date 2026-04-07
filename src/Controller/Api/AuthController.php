@@ -23,9 +23,8 @@ use Symfony\Component\Routing\Attribute\Route;
 final class AuthController extends AbstractController
 {
     public function __construct(
-        private CollectorRegistry $prometheusRegistry,
-    ) {
-    }
+        private CollectorRegistry $registry,
+    ) {}
 
     #[Route('/register', methods: ['POST'])]
     public function register(
@@ -62,7 +61,7 @@ final class AuthController extends AbstractController
         $clinic = null;
         if ($data['role'] === 'veterinaire' || $data['role'] === 'responsable') {
             if (!empty($data['clinicName'])) {
-                  // crée un nouvel établissement
+                // crée un nouvel établissement
                 $clinic = new Clinic();
                 $clinic->setName($data['clinicName']);
                 if (!empty($data['clinicType']) && in_array($data['clinicType'], $allowedTypes, true)) {
@@ -70,7 +69,7 @@ final class AuthController extends AbstractController
                 }
                 $em->persist($clinic);
             } elseif (!empty($data['clinicId'])) {
-                   // rejoint un établissement existant
+                // rejoint un établissement existant
                 $clinic = $clinicRepo->find($data['clinicId']);
                 if (!$clinic) {
                     return $this->json(['error' => 'Établissement introuvable.'], 404);
@@ -114,11 +113,17 @@ final class AuthController extends AbstractController
         $linking->linkUserToOwner($user, $clinic, $em);
 
         // Prometheus : incrémente le compteur d'inscriptions par rôle (affiché dans Grafana)
-        $this->prometheusRegistry
+        $this->registry
             ->getOrRegisterCounter('asv', 'user_register_total', 'Nombre d\'inscriptions', ['role'])
             ->inc([$user->getRole()]);
 
-        return $this->json($serializer->serializeRegisterResponseUser($user), 201);
+        return $this->json([
+            'id' => $user->getId(),
+            'email' => $user->getEmail(),
+            'name' => $user->getName(),
+            'role' => $user->getRole(),
+            'clinicId' => $user->getClinic()?->getId(),
+        ], 201);
     }
 
     #[Route('/login', methods: ['POST'])]
@@ -165,11 +170,21 @@ final class AuthController extends AbstractController
         }
 
         // Prometheus : incrémente le compteur de connexions réussies par rôle (affiché dans Grafana)
-        $this->prometheusRegistry
+        $this->registry
             ->getOrRegisterCounter('asv', 'user_login_total', 'Nombre de connexions réussies', ['role'])
             ->inc([$user->getRole()]);
 
-        return $this->json($serializer->serializeLoginSuccessResponse($user, $jwtManager->create($user)));
+        return $this->json([
+            'token' => $jwtManager->create($user),
+            'user' => [
+                'id' => $user->getId(),
+                'email' => $user->getEmail(),
+                'name' => $user->getName(),
+                'role' => $user->getRole(),
+                'clinicId' => $user->getClinic()?->getId(),
+                'clinicName' => $user->getClinic()?->getName(),
+            ],
+        ]);
     }
 
     #[Route('/me', methods: ['GET'])]
