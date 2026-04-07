@@ -5,13 +5,11 @@ namespace App\Service;
 use App\Entity\Clinic;
 use App\Entity\Owner;
 use App\Repository\OwnerRepository;
-use App\Repository\UserRepository;
 
 class ApiValidator
 {
     public function __construct(
         private OwnerRepository $ownerRepo,
-        private UserRepository $userRepo,
     ) {}
 
     // ─── Formats invalides ────────────────────────────────────────────────────
