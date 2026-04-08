@@ -62,7 +62,8 @@ final class AuthController extends AbstractController
         $clinic = null;
         if ($data['role'] === 'veterinaire' || $data['role'] === 'responsable') {
             if (!empty($data['clinicName'])) {
-                  // crée un nouvel établissement
+                // crée un nouvel établissement → le créateur devient responsable
+                $user->setRole('responsable');
                 $clinic = new Clinic();
                 $clinic->setName($data['clinicName']);
                 if (!empty($data['clinicType']) && in_array($data['clinicType'], $allowedTypes, true)) {
@@ -87,13 +88,8 @@ final class AuthController extends AbstractController
                 return $this->json(['error' => 'Établissement introuvable.'], 404);
             }
         } elseif ($data['role'] === 'client') {
-            if (empty($data['clinicId'])) {
-                return $this->json(['error' => 'Un client doit choisir un établissement (clinicId requis).'], 400);
-            }
-            $clinic = $clinicRepo->find($data['clinicId']);
-            if (!$clinic) {
-                return $this->json(['error' => 'Établissement introuvable.'], 404);
-            }
+            // Le client n'a pas besoin de clinicId : il sera auto-lié via son email (Owner existant)
+            $clinic = null;
         }
 
         // Vérifie unicité email dans cet établissement
@@ -173,18 +169,11 @@ final class AuthController extends AbstractController
     }
 
     #[Route('/me', methods: ['GET'])]
-    public function me(): JsonResponse
+    public function me(SerializerService $serializer): JsonResponse
     {
         /** @var User $user */
         $user = $this->getUser();
 
-        return $this->json([
-            'id' => $user->getId(),
-            'email' => $user->getEmail(),
-            'name' => $user->getName(),
-            'role' => $user->getRole(),
-            'clinicId' => $user->getClinic()?->getId(),
-            'clinicName' => $user->getClinic()?->getName(),
-        ]);
+        return $this->json($serializer->serializeLoginResponseUser($user));
     }
 }

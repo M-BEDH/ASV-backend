@@ -7,7 +7,6 @@ use App\Entity\User;
 use App\Repository\OwnerRepository;
 use App\Service\ApiValidator;
 use App\Service\SerializerService;
-use App\Service\UserOwnerLinkingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -17,6 +16,7 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/owners')]
 final class OwnerApiController extends AbstractController
 {
+    use ClinicAccessTrait;
     #[Route('', methods: ['GET'])]
     public function index(OwnerRepository $repo, SerializerService $serializer): JsonResponse
     {
@@ -29,9 +29,7 @@ final class OwnerApiController extends AbstractController
         }
 
         $clinic = $me->getClinic();
-        $owners = $clinic
-            ? $repo->findBy(['clinic' => $clinic])
-            : $repo->findBy(['clinic' => null]);
+        $owners = $clinic ? $repo->findByClinic($clinic) : [];
 
         return $this->json(array_map(fn($o) => $serializer->serializeOwner($o), $owners));
     }
@@ -44,9 +42,7 @@ final class OwnerApiController extends AbstractController
             return $this->json(['error' => 'Propriétaire introuvable.'], 404);
         }
 
-        /** @var User $me */
-        $me = $this->getUser();
-        if ($owner->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+        if (!$this->canAccess($owner)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -60,7 +56,6 @@ final class OwnerApiController extends AbstractController
         OwnerRepository $ownerRepo,
         ApiValidator $validator,
         SerializerService $serializer,
-        UserOwnerLinkingService $linking,
     ): JsonResponse {
         /** @var User $me */
         $me = $this->getUser();
@@ -71,6 +66,47 @@ final class OwnerApiController extends AbstractController
             return $this->json(['error' => $error], 400);
         }
 
+        if ($me->getRole() === 'client') {
+            $existing = $ownerRepo->findOneBy(['user' => $me]);
+            if ($existing !== null) {
+                return $this->json(['error' => 'Vous avez déjà un profil propriétaire.'], 409);
+            }
+
+            $owner = new Owner();
+            $owner->setNom($data['nom']);
+            $owner->setPrenom($data['prenom']);
+            $owner->setAdresse($data['adresse'] ?? null);
+            $owner->setTelephone($data['telephone'] ?? null);
+            $owner->setEmail($data['email']);
+            $owner->setCreatedBy($me);
+            $owner->setUser($me);
+            if ($me->getClinic()) {
+                $owner->addClinic($me->getClinic());
+            }
+            if (!empty($data['email']) && $data['email'] !== $me->getEmail()) {
+                $me->setEmail($data['email']);
+            }
+
+            $em->persist($owner);
+            $em->flush();
+
+            return $this->json($serializer->serializeOwner($owner), 201);
+        }
+
+        // Staff (véto, responsable, assistant...)
+        $clinic = $me->getClinic();
+
+        // Si un Owner avec cet email existe déjà → on ajoute juste la clinique
+        $existing = $ownerRepo->findOneBy(['email' => $data['email']]);
+        if ($existing !== null) {
+            if ($clinic && !$existing->hasClinic($clinic)) {
+                $existing->addClinic($clinic);
+                $em->flush();
+            }
+            return $this->json($serializer->serializeOwner($existing), 200);
+        }
+
+        // Nouvel Owner
         $owner = new Owner();
         $owner->setNom($data['nom']);
         $owner->setPrenom($data['prenom']);
@@ -78,25 +114,8 @@ final class OwnerApiController extends AbstractController
         $owner->setTelephone($data['telephone'] ?? null);
         $owner->setEmail($data['email']);
         $owner->setCreatedBy($me);
-
-        if ($me->getRole() === 'client') {
-            // Un client ne peut avoir qu'un seul profil owner par établissement
-            $existing = $ownerRepo->findOneBy(['user' => $me]);
-            if ($existing !== null) {
-                return $this->json(['error' => 'Vous avez déjà un profil propriétaire.'], 409);
-            }
-
-            $owner->setUser($me);
-            $owner->setClinic($me->getClinic());
-            if (!empty($data['email']) && $data['email'] !== $me->getEmail()) {
-                $me->setEmail($data['email']);
-            }
-        } else {
-            $clinic = $me->getClinic();
-            $owner->setClinic($clinic);
-
-            // Lier un user client existant (même email + même clinique)
-            $linking->linkOwnerToUser($owner, $clinic);
+        if ($clinic) {
+            $owner->addClinic($clinic);
         }
 
         $em->persist($owner);
@@ -113,7 +132,8 @@ final class OwnerApiController extends AbstractController
         if ($me->getRole() === 'client') {
             return $owner->getUser()?->getId() === $me->getId();
         }
-        return $owner->getClinic()?->getId() === $me->getClinic()?->getId();
+
+        return $this->aUneClinicCommune($owner);
     }
 
     #[Route('/{id}', methods: ['PUT'])]

@@ -74,7 +74,15 @@ final class UserApiController extends AbstractController
         $data = json_decode($request->getContent(), true);
 
         if (isset($data['role'])) {
-            return $this->json(['error' => 'Le rôle ne peut pas être modifié après l\'inscription.'], 400);
+            /** @var \App\Entity\User $me */
+            $me = $this->getUser();
+            if ($me->getRole() !== 'responsable') {
+                return $this->json(['error' => 'Seul un responsable peut modifier le rôle d\'un collaborateur.'], 403);
+            }
+            if (!in_array($data['role'], RoleConstants::ASSIGNABLE_BY_RESPONSABLE, true)) {
+                return $this->json(['error' => 'Rôle invalide. Valeurs acceptées : ' . implode(', ', RoleConstants::ASSIGNABLE_BY_RESPONSABLE) . '.'], 400);
+            }
+            $user->setRole($data['role']);
         }
 
         if (isset($data['email'])) {
@@ -106,7 +114,7 @@ final class UserApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
-        $em->remove($user);
+        $user->anonymize();
         $em->flush();
 
         return $this->json(null, 204);
