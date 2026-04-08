@@ -6,7 +6,9 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     libzip-dev \
-    && docker-php-ext-install zip pdo pdo_mysql \
+    libicu-dev \
+    && docker-php-ext-configure intl \
+    && docker-php-ext-install zip pdo pdo_mysql intl \
     && rm -rf /var/lib/apt/lists/*
 
     # APCu -> stocke des données PHP directement en mémoire du serveur pour éviter de les recalculer ou de les récupérer à chaque requête.

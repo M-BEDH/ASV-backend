@@ -11,6 +11,7 @@
         "doctrine/doctrine-bundle": "^2.18",
         "doctrine/doctrine-migrations-bundle": "^3.7",
         "doctrine/orm": "^3.6",
+        "easycorp/easyadmin-bundle": "*",
         "lexik/jwt-authentication-bundle": "^3.2",
         "nelmio/cors-bundle": "^2.6",
         "phpdocumentor/reflection-docblock": "^6.0",
@@ -34,9 +35,11 @@
         "symfony/serializer": "7.4.*",
         "symfony/string": "7.4.*",
         "symfony/translation": "7.4.*",
+        "symfony/twig-bundle": "7.4.*",
         "symfony/uid": "7.4",
         "symfony/validator": "7.4.*",
-        "symfony/yaml": "7.4.*"
+        "symfony/yaml": "7.4.*",
+        "twig/extra-bundle": "*"
     },
     "config": {
         "allow-plugins": {
