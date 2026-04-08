@@ -3,7 +3,7 @@
 namespace App\Service;
 
 use App\Entity\Clinic;
-// use App\Entity\Owner;
+use App\Entity\Owner;
 use App\Entity\User;
 use App\Repository\OwnerRepository;
 use App\Repository\UserRepository;
@@ -17,30 +17,27 @@ class UserOwnerLinkingService
     ) {
     }
 
-    // Appelé après l'inscription d'un client : relie le User à un Owner existant
+    // Appelé après l'inscription d'un client : relie le User à tous ses Owner existants
     public function linkUserToOwner(User $user, ?Clinic $clinic, EntityManagerInterface $em): void
     {
-        if ($user->getRole() !== 'client' || $clinic === null) {
+        if ($user->getRole() !== 'client') {
             return;
         }
 
-        $owner = $this->ownerRepo->findOneBy(['email' => $user->getEmail(), 'clinic' => $clinic]);
-        if ($owner !== null && $owner->getUser() === null) {
-            $owner->setUser($user);
+        $owners = $this->ownerRepo->findBy(['email' => $user->getEmail()]);
+        foreach ($owners as $owner) {
+            if ($owner->getUser() === null) {
+                $owner->setUser($user);
+            }
+            // Ajoute toutes les cliniques de l'owner au user client
+            foreach ($owner->getClinics() as $ownerClinic) {
+                $user->addClinic($ownerClinic);
+            }
+        }
+
+        if (!empty($owners)) {
             $em->flush();
         }
     }
 
-    // Appelé à la création d'un Owner par un véto : relie l'Owner à un User client existant
-    // public function linkOwnerToUser(Owner $owner, ?Clinic $clinic): void
-    // {
-    //     if ($clinic === null || $owner->getEmail() === null) {
-    //         return;
-    //     }
-
-    //     $user = $this->userRepo->findOneBy(['email' => $owner->getEmail(), 'clinic' => $clinic]);
-    //     if ($user !== null && $user->getRole() === 'client') {
-    //         $owner->setUser($user);
-    //     }
-    // }
-}
+ }

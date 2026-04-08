@@ -64,7 +64,7 @@ class SerializerService
             'adresse' => $o->getAdresse(),
             'telephone' => $o->getTelephone(),
             'email' => $o->getEmail(),
-            'clinicId' => $o->getClinic()?->getId(),
+            'clinicIds' => $o->getClinics()->map(fn($c) => $c->getId())->toArray(),
             'createdBy' => $o->getCreatedBy() ? [
                 'id' => $o->getCreatedBy()->getId(),
                 'name' => $o->getCreatedBy()->getName(),
@@ -99,12 +99,22 @@ class SerializerService
     // Prometheus : sérialise les données d'un utilisateur pour la réponse de connexion et l'affichage dans Grafana
     public function serializeLoginResponseUser(User $u): array
     {
+        if ($u->getRole() === 'client') {
+            return [
+                'id'       => $u->getId(),
+                'email'    => $u->getEmail(),
+                'name'     => $u->getName(),
+                'role'     => $u->getRole(),
+                'clinicIds' => $u->getClinics()->map(fn($c) => $c->getId())->toArray(),
+            ];
+        }
+
         return [
-            'id' => $u->getId(),
-            'email' => $u->getEmail(),
-            'name' => $u->getName(),
-            'role' => $u->getRole(),
-            'clinicId' => $u->getClinic()?->getId(),
+            'id'         => $u->getId(),
+            'email'      => $u->getEmail(),
+            'name'       => $u->getName(),
+            'role'       => $u->getRole(),
+            'clinicId'   => $u->getClinic()?->getId(),
             'clinicName' => $u->getClinic()?->getName(),
         ];
     }
