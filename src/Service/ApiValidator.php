@@ -47,7 +47,7 @@ class ApiValidator
         }
         if ($error = $this->validateEmail($data['email'])) return $error;
         if (!empty($data['telephone']) && ($error = $this->validatePhone($data['telephone']))) return $error;
-        if ($this->ownerRepo->findOneBy(['email' => $data['email'], 'clinic' => $clinic])) {
+        if ($clinic && $this->ownerRepo->findOneByEmailAndClinic($data['email'], $clinic)) {
             return 'Un propriétaire avec cet email existe déjà dans cet établissement.';
         }
         return null;
@@ -58,9 +58,9 @@ class ApiValidator
         if (array_key_exists('email', $data)) {
             if (empty($data['email'])) return "L'email ne peut pas être vide.";
             if ($error = $this->validateEmail($data['email'])) return $error;
-            $existing = $this->ownerRepo->findOneBy(['email' => $data['email'], 'clinic' => $current->getClinic()]);
-            if ($existing && $existing->getId() !== $current->getId()) {
-                return 'Un propriétaire avec cet email existe déjà dans cet établissement.';
+            $existingByEmail = $this->ownerRepo->findOneBy(['email' => $data['email']]);
+            if ($existingByEmail && $existingByEmail->getId() !== $current->getId()) {
+                return 'Un propriétaire avec cet email existe déjà.';
             }
         }
         if (array_key_exists('telephone', $data) && !empty($data['telephone'])) {

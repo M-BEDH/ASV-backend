@@ -36,7 +36,8 @@ final class MedicalConsultationApiController extends AbstractController
         }
 
         $clinic = $me->getClinic();
-        $consultations = $repo->findByClinicWithRelations($clinic?->getId());
+        if (!$clinic) return $this->json([]);
+        $consultations = $repo->findByClinicAccess($clinic);
 
         return $this->json(array_map(fn($c) => $serializer->serializeConsultation($c), $consultations));
     }
@@ -49,7 +50,7 @@ final class MedicalConsultationApiController extends AbstractController
             return $this->json(['error' => 'Consultation introuvable.'], 404);
         }
 
-        if (!$this->memeClinic($consultation)) {
+        if (!$this->doShowConsultation($consultation)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 

@@ -36,7 +36,7 @@ final class AnimalApiController extends AbstractController
 
         $clinic = $me->getClinic();
         $animals = $clinic
-            ? $repo->findBy(['clinic' => $clinic])
+            ? $repo->findByClinicAccess($clinic)
             : $repo->findBy(['clinic' => null]);
 
         return $this->json(array_map(fn($a) => $serializer->serializeAnimal($a), $animals));
@@ -50,7 +50,7 @@ final class AnimalApiController extends AbstractController
             return $this->json(['error' => 'Animal introuvable.'], 404);
         }
 
-        if (!$this->memeClinic($animal)) {
+        if (!$this->doShowAnimal($animal)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -171,9 +171,7 @@ final class AnimalApiController extends AbstractController
             return $this->json(['error' => 'Animal introuvable.'], 404);
         }
 
-        /** @var User $me */
-        $me = $this->getUser();
-        if ($me->getRole() !== 'client' && !$this->memeClinic($animal)) {
+        if (!$this->doShowAnimal($animal)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 

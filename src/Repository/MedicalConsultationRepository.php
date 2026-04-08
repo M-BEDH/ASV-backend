@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Entity\Clinic;
 use App\Entity\MedicalConsultation;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -54,6 +55,30 @@ class MedicalConsultationRepository extends ServiceEntityRepository
         }
 
         return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Consultations visibles par une clinique :
+     * - animaux dont l'owner est lié à cette clinique
+     * - consultations sans animal mais créées par cette clinique
+     *
+     * @return MedicalConsultation[]
+     */
+    public function findByClinicAccess(Clinic $clinic): array
+    {
+        return $this->createQueryBuilder('c')
+            ->leftJoin('c.animal', 'a')
+            ->addSelect('a')
+            ->leftJoin('c.veterinaire', 'v')
+            ->addSelect('v')
+            ->leftJoin('a.proprietaire', 'o')
+            ->leftJoin('o.clinics', 'oc')
+            ->where('oc = :clinic')
+            ->orWhere('c.animal IS NULL AND c.clinic = :clinic')
+            ->setParameter('clinic', $clinic)
+            ->orderBy('c.dateConsultation', 'DESC')
+            ->getQuery()
+            ->getResult();
     }
 
     /**

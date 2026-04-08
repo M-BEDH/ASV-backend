@@ -52,6 +52,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(mappedBy: 'veterinaire', targetEntity: MedicalConsultation::class)]
     private Collection $medicalConsultationsAsVeterinaire;
 
+    // Uniquement pour les clients : cliniques où ils sont propriétaires
+    #[ORM\ManyToMany(targetEntity: Clinic::class)]
+    #[ORM\JoinTable(name: 'user_clinic')]
+    private Collection $clinics;
+
     public function __construct()
     {
         // Génère un UUID v4 au format RFC 4122
@@ -61,6 +66,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->createdOwners = new ArrayCollection();
         $this->linkedOwners = new ArrayCollection();
         $this->medicalConsultationsAsVeterinaire = new ArrayCollection();
+        $this->clinics = new ArrayCollection();
     }
 
     public function __toString(): string
@@ -79,12 +85,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         // assistant has same rights as veterinaire
         $symfonyRole = match ($this->role) {
+            'super_admin'              => 'ROLE_SUPER_ADMIN',
             'veterinaire', 'assistant' => 'ROLE_VETERINAIRE',
-            'client' => 'ROLE_CLIENT',
-            default => 'ROLE_USER',
+            'client'                   => 'ROLE_CLIENT',
+            default                    => 'ROLE_USER',
         };
 
         return [$symfonyRole, 'ROLE_USER'];
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
     }
 
     public function eraseCredentials(): void
@@ -178,5 +190,40 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getMedicalConsultationsAsVeterinaire(): Collection
     {
         return $this->medicalConsultationsAsVeterinaire;
+    }
+
+    /** @return Collection<int, Clinic> */
+    public function getClinics(): Collection
+    {
+        return $this->clinics;
+    }
+
+    public function addClinic(Clinic $clinic): static
+    {
+        if (!$this->clinics->contains($clinic)) {
+            $this->clinics->add($clinic);
+        }
+        return $this;
+    }
+
+    public function removeClinic(Clinic $clinic): static
+    {
+        $this->clinics->removeElement($clinic);
+        return $this;
+    }
+
+    public function hasClinic(Clinic $clinic): bool
+    {
+        return $this->clinics->contains($clinic);
+    }
+
+    public function anonymize(): static
+    {
+        $this->name     = 'Utilisateur supprimé';
+        $this->email    = 'supprime_' . $this->id . '@deleted.local';
+        $this->password = bin2hex(random_bytes(32));
+        $this->clinic   = null;
+        $this->clinics->clear();
+        return $this;
     }
 }

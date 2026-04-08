@@ -36,22 +36,19 @@ final class ClinicApiController extends AbstractController
             return $this->json(['error' => "Email invalide."], 400);
         }
 
-        $owners = $ownerRepo->findBy(['email' => $email]);
+        $owner = $ownerRepo->findOneBy(['email' => $email]);
 
-        if (empty($owners)) {
+        if (!$owner) {
             return $this->json(['found' => false, 'clinics' => []]);
         }
 
         $clinics = [];
-        foreach ($owners as $owner) {
-            $clinic = $owner->getClinic();
-            if ($clinic !== null) {
-                $clinics[] = [
-                    'id' => $clinic->getId(),
-                    'name' => $clinic->getName(),
-                    'type' => $clinic->getType(),
-                ];
-            }
+        foreach ($owner->getClinics() as $clinic) {
+            $clinics[] = [
+                'id' => $clinic->getId(),
+                'name' => $clinic->getName(),
+                'type' => $clinic->getType(),
+            ];
         }
 
         return $this->json(['found' => true, 'clinics' => $clinics]);

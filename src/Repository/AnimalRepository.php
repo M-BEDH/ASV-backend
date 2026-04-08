@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Animal;
+use App\Entity\Clinic;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -14,6 +15,25 @@ class AnimalRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Animal::class);
+    }
+
+    /**
+     * Retourne tous les animaux visibles par une clinique :
+     * - animaux dont l'owner est lié à cette clinique
+     * - animaux sans owner mais créés par cette clinique
+     *
+     * @return Animal[]
+     */
+    public function findByClinicAccess(Clinic $clinic): array
+    {
+        return $this->createQueryBuilder('a')
+            ->leftJoin('a.proprietaire', 'o')
+            ->leftJoin('o.clinics', 'c')
+            ->where('c = :clinic')
+            ->orWhere('a.proprietaire IS NULL AND a.clinic = :clinic')
+            ->setParameter('clinic', $clinic)
+            ->getQuery()
+            ->getResult();
     }
 
     //    /**

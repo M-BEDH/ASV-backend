@@ -1,15 +1,35 @@
 security:
+    role_hierarchy:
+        ROLE_SUPER_ADMIN: [ROLE_VETERINAIRE, ROLE_USER]
+        ROLE_VETERINAIRE:  [ROLE_USER]
+
     password_hashers:
         App\Entity\User:
             algorithm: auto
 
     providers:
+        admin_user_provider:
+            id: App\Security\AdminUserProvider
         app_user_provider:
             entity:
                 class: App\Entity\User
-                property: id   # à la place de email, car on va utiliser l'id pour l'authentification 
+                property: id
 
     firewalls:
+        admin:
+            pattern: ^/admin
+            lazy: true
+            provider: admin_user_provider
+            form_login:
+                login_path: admin_login
+                check_path: admin_login
+                default_target_path: /admin
+                username_parameter: _username
+                password_parameter: _password
+                enable_csrf: true
+            logout:
+                path: admin_logout
+                target: admin_login
         main:
             lazy: true
             stateless: true
@@ -17,11 +37,13 @@ security:
             jwt: ~
 
     access_control:
-        - { path: ^/api/auth/login,    roles: PUBLIC_ACCESS }
-        - { path: ^/api/auth/register, roles: PUBLIC_ACCESS }
+        - { path: ^/admin/login,          roles: PUBLIC_ACCESS }
+        - { path: ^/admin,                roles: ROLE_SUPER_ADMIN }
+        - { path: ^/api/auth/login,       roles: PUBLIC_ACCESS }
+        - { path: ^/api/auth/register,    roles: PUBLIC_ACCESS }
         - { path: ^/api/clinics/by-email, roles: PUBLIC_ACCESS, methods: [GET] }
-        - { path: ^/api/clinics$,      roles: PUBLIC_ACCESS, methods: [GET] }
-        - { path: ^/api,               roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/clinics$,         roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api,                  roles: IS_AUTHENTICATED_FULLY }
 
 when@test:
     security:
