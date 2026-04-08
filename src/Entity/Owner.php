@@ -35,9 +35,9 @@ class Owner
     #[ORM\JoinColumn(name: 'created_by', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?User $createdBy = null;
 
-    #[ORM\ManyToOne(targetEntity: Clinic::class)]
-    #[ORM\JoinColumn(name: 'clinic_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
-    private ?Clinic $clinic = null;
+    #[ORM\ManyToMany(targetEntity: Clinic::class)]
+    #[ORM\JoinTable(name: 'owner_clinic')]
+    private Collection $clinics;
 
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private ?\DateTimeImmutable $createdAt = null;
@@ -54,6 +54,7 @@ class Owner
         // Génère un UUID v4 au format RFC 4122
         $this->id = Uuid::v4()->toRfc4122();
         $this->createdAt = new \DateTimeImmutable();
+        $this->clinics = new ArrayCollection();
         $this->animals = new ArrayCollection();
     }
 
@@ -132,14 +133,29 @@ class Owner
         return $this;
     }
 
-    public function getClinic(): ?Clinic
+    /** @return Collection<int, Clinic> */
+    public function getClinics(): Collection
     {
-        return $this->clinic;
+        return $this->clinics;
     }
-    public function setClinic(?Clinic $clinic): static
+
+    public function addClinic(Clinic $clinic): static
     {
-        $this->clinic = $clinic;
+        if (!$this->clinics->contains($clinic)) {
+            $this->clinics->add($clinic);
+        }
         return $this;
+    }
+
+    public function removeClinic(Clinic $clinic): static
+    {
+        $this->clinics->removeElement($clinic);
+        return $this;
+    }
+
+    public function hasClinic(Clinic $clinic): bool
+    {
+        return $this->clinics->contains($clinic);
     }
 
     public function getCreatedAt(): ?\DateTimeImmutable
