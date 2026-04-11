@@ -5,6 +5,7 @@ namespace App\Controller\Api;
 use App\Entity\Owner;
 use App\Entity\User;
 use App\Repository\OwnerRepository;
+use App\Repository\UserRepository;
 use App\Service\ApiValidator;
 use App\Service\SerializerService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -54,6 +55,7 @@ final class OwnerApiController extends AbstractController
         Request $request,
         EntityManagerInterface $em,
         OwnerRepository $ownerRepo,
+        UserRepository $userRepo,
         ApiValidator $validator,
         SerializerService $serializer,
     ): JsonResponse {
@@ -80,8 +82,8 @@ final class OwnerApiController extends AbstractController
             $owner->setEmail($data['email']);
             $owner->setCreatedBy($me);
             $owner->setUser($me);
-            if ($me->getClinic()) {
-                $owner->addClinic($me->getClinic());
+            foreach ($me->getClinics() as $c) {
+                $owner->addClinic($c);
             }
             if (!empty($data['email']) && $data['email'] !== $me->getEmail()) {
                 $me->setEmail($data['email']);
@@ -101,8 +103,26 @@ final class OwnerApiController extends AbstractController
         if ($existing !== null) {
             if ($clinic && !$existing->hasClinic($clinic)) {
                 $existing->addClinic($clinic);
-                $em->flush();
             }
+
+            $linkedUser = $existing->getUser();
+            if (!$linkedUser) {
+                $linkedUser = $userRepo->findOneBy(['email' => $data['email']]);
+                if (!$linkedUser) {
+                    $linkedUser = new User();
+                    $linkedUser->setEmail($data['email']);
+                    $linkedUser->setName(trim($existing->getPrenom() . ' ' . $existing->getNom()));
+                    $linkedUser->setRole('client');
+                    $em->persist($linkedUser);
+                }
+                $existing->setUser($linkedUser);
+            }
+
+            if ($linkedUser->getRole() === 'client' && $clinic && !$linkedUser->hasClinic($clinic)) {
+                $linkedUser->addClinic($clinic);
+            }
+
+            $em->flush();
             return $this->json($serializer->serializeOwner($existing), 200);
         }
 
@@ -120,6 +140,29 @@ final class OwnerApiController extends AbstractController
 
         $em->persist($owner);
         $em->flush();
+
+        // Pré-compte client : un seul User par email, multi-clinique via ManyToMany
+        $existingUser = $userRepo->findOneBy(['email' => $data['email']]);
+        if (!$existingUser) {
+            $clientUser = new User();
+            $clientUser->setEmail($data['email']);
+            $clientUser->setName(trim($data['prenom'] . ' ' . $data['nom']));
+            $clientUser->setRole('client');
+            if ($clinic) {
+                $clientUser->addClinic($clinic);
+            }
+            $owner->setUser($clientUser);
+            $em->persist($clientUser);
+            $em->flush();
+        } elseif ($existingUser->getRole() === 'client') {
+            if ($clinic && !$existingUser->hasClinic($clinic)) {
+                $existingUser->addClinic($clinic);
+            }
+            if ($owner->getUser() === null) {
+                $owner->setUser($existingUser);
+            }
+            $em->flush();
+        }
 
         return $this->json($serializer->serializeOwner($owner), 201);
     }
@@ -168,6 +211,13 @@ final class OwnerApiController extends AbstractController
         if (isset($data['prenom'])) {
             $owner->setPrenom($data['prenom']);
         }
+        // Synchronise le nom du User client avec celui de son Owner
+        if (isset($data['nom']) || isset($data['prenom'])) {
+            $linkedUser = $owner->getUser();
+            if ($linkedUser && $linkedUser->getRole() === 'client') {
+                $linkedUser->setName(trim(($data['prenom'] ?? $owner->getPrenom()) . ' ' . ($data['nom'] ?? $owner->getNom())));
+            }
+        }
         if (array_key_exists('adresse', $data)) {
             $owner->setAdresse($data['adresse']);
         }
@@ -198,7 +248,12 @@ final class OwnerApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
-        $em->remove($owner);
+        $linkedUser = $owner->getUser();
+        if ($linkedUser && $linkedUser->getRole() === 'client') {
+            $linkedUser->anonymize();
+        }
+
+        $owner->anonymize();
         $em->flush();
 
         return $this->json(null, 204);
