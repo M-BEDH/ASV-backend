@@ -57,6 +57,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\JoinTable(name: 'user_clinic')]
     private Collection $clinics;
 
+    // Champs transitoires — utilisés uniquement lors de la création d'un responsable via EasyAdmin (non persistés)
+    private ?string $newClinicName = null;
+    private ?string $newClinicType = null;
+
     public function __construct()
     {
         // Génère un UUID v4 au format RFC 4122
@@ -216,6 +220,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return $this->clinics->contains($clinic);
     }
+
+    public function getNewClinicName(): ?string { return $this->newClinicName; }
+    public function setNewClinicName(?string $v): static { $this->newClinicName = $v; return $this; }
+
+    public function getNewClinicType(): ?string { return $this->newClinicType; }
+    public function setNewClinicType(?string $v): static { $this->newClinicType = $v; return $this; }
 
     public function anonymize(): static
     {
