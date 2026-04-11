@@ -28,4 +28,28 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $user->setPassword($newHashedPassword);
         $this->getEntityManager()->flush();
     }
+
+    public function findPendingByEmail(string $email): ?User
+    {
+        return $this->createQueryBuilder('u')
+            ->where('u.email = :email')
+            ->andWhere('u.password IS NULL')
+            ->andWhere('u.clinic IS NOT NULL OR u.clinics IS NOT EMPTY')
+            ->setParameter('email', $email)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /** @return User[] */
+    public function findAllPendingByEmail(string $email): array
+    {
+        return $this->createQueryBuilder('u')
+            ->where('u.email = :email')
+            ->andWhere('u.password IS NULL')
+            ->andWhere('u.clinic IS NOT NULL OR u.clinics IS NOT EMPTY')
+            ->setParameter('email', $email)
+            ->getQuery()
+            ->getResult();
+    }
 }
