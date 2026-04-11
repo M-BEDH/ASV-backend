@@ -42,8 +42,15 @@ final class UserApiController extends AbstractController
     }
 
     #[Route('', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $em, SerializerService $serializer): JsonResponse
+    public function create(Request $request, EntityManagerInterface $em, SerializerService $serializer, UserRepository $repo): JsonResponse
     {
+        /** @var \App\Entity\User $me */
+        $me = $this->getUser();
+
+        if ($me->getRole() !== 'responsable') {
+            return $this->json(['error' => 'Seul un responsable peut ajouter des collaborateurs.'], 403);
+        }
+
         $data = json_decode($request->getContent(), true);
 
         if (empty($data['email']) || empty($data['name']) || empty($data['role'])) {
@@ -52,11 +59,22 @@ final class UserApiController extends AbstractController
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             return $this->json(['error' => "Format d'email invalide."], 400);
         }
+        if (!in_array($data['role'], RoleConstants::ASSIGNABLE_BY_RESPONSABLE, true)) {
+            return $this->json(['error' => 'Rôle invalide. Valeurs acceptées : ' . implode(', ', RoleConstants::ASSIGNABLE_BY_RESPONSABLE) . '.'], 400);
+        }
+
+        $clinic = $me->getClinic();
+
+        if ($repo->findOneBy(['email' => $data['email'], 'clinic' => $clinic])) {
+            return $this->json(['error' => 'Un compte existe déjà pour cet email dans cet établissement.'], 409);
+        }
 
         $user = new User();
         $user->setEmail($data['email']);
         $user->setName($data['name']);
         $user->setRole($data['role']);
+        $user->setClinic($clinic);
+        // Pas de mot de passe : le compte sera activé lors de la première connexion du collaborateur
 
         $em->persist($user);
         $em->flush();
