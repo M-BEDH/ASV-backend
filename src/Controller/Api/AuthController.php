@@ -40,16 +40,42 @@ final class AuthController extends AbstractController
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
+        // Validation basique de l'email (commun aux deux flux)
+        if (empty($data['email'])) {
+            return $this->json(['error' => 'Email requis.'], 400);
+        }
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            return $this->json(['error' => "Format d'email invalide."], 400);
+        }
+
+        // Flux A : activation de tous les pré-comptes liés à cet email
+        $pendingUsers = $userRepo->findAllPendingByEmail($data['email']);
+        if (!empty($pendingUsers)) {
+            if (empty($data['password'])) {
+                return $this->json(['error' => 'Le mot de passe est obligatoire.'], 400);
+            }
+            if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/', $data['password'])) {
+                return $this->json(['error' => 'Le mot de passe doit contenir au moins 6 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.'], 400);
+            }
+            foreach ($pendingUsers as $pendingUser) {
+                $pendingUser->setPassword($hasher->hashPassword($pendingUser, $data['password']));
+                $this->prometheusRegistry
+                    ->getOrRegisterCounter('asv', 'user_register_total', 'Nombre d\'inscriptions', ['role'])
+                    ->inc([$pendingUser->getRole()]);
+            }
+            $em->flush();
+
+            return $this->json($serializer->serializeRegisterResponseUser($pendingUsers[0]), 201);
+        }
+
+        // Flux B : inscription classique — seuls responsable et client sont autorisés
         if ($error = $validator->validateUserCreate($data)) {
             return $this->json(['error' => $error], 400);
         }
 
-        if (!in_array($data['role'], RoleConstants::ALL, true)) {
-            return $this->json(['error' => 'Rôle invalide. Valeurs acceptées : client, veterinaire, responsable, assistant, benevole.'], 400);
+        if ($data['role'] !== 'responsable') {
+            return $this->json(['error' => 'Ce rôle doit être ajouté par un responsable depuis l\'application.'], 403);
         }
-
-        // Unicité email par établissement (un client peut s'inscrire dans plusieurs établissements)
-        // On vérifie après avoir résolu la clinique — voir vérification en fin de bloc ci-dessous
 
         $user = new User();
         $user->setEmail($data['email']);
@@ -57,42 +83,20 @@ final class AuthController extends AbstractController
         $user->setRole($data['role']);
         $user->setPassword($hasher->hashPassword($user, $data['password']));
 
-        // Établissement assignment
         $allowedTypes = ['clinique', 'refuge', 'association'];
         $clinic = null;
-        if ($data['role'] === 'veterinaire' || $data['role'] === 'responsable') {
-            if (!empty($data['clinicName'])) {
-                // crée un nouvel établissement → le créateur devient responsable
-                $user->setRole('responsable');
-                $clinic = new Clinic();
-                $clinic->setName($data['clinicName']);
-                if (!empty($data['clinicType']) && in_array($data['clinicType'], $allowedTypes, true)) {
-                    $clinic->setType($data['clinicType']);
-                }
-                $em->persist($clinic);
-            } elseif (!empty($data['clinicId'])) {
-                // rejoint un établissement existant
-                $clinic = $clinicRepo->find($data['clinicId']);
-                if (!$clinic) {
-                    return $this->json(['error' => 'Établissement introuvable.'], 404);
-                }
-            } else {
-                return $this->json(['error' => 'Un vétérinaire ou responsable doit créer ou rejoindre un établissement.'], 400);
-            }
-        } elseif ($data['role'] === 'assistant' || $data['role'] === 'benevole') {
-            if (empty($data['clinicId'])) {
-                return $this->json(['error' => 'Un assistant ou bénévole doit rejoindre un établissement existant (clinicId requis).'], 400);
-            }
-            $clinic = $clinicRepo->find($data['clinicId']);
-            if (!$clinic) {
-                return $this->json(['error' => 'Établissement introuvable.'], 404);
-            }
-        } elseif ($data['role'] === 'client') {
-            // Le client n'a pas besoin de clinicId : il sera auto-lié via son email (Owner existant)
-            $clinic = null;
-        }
 
-        // Vérifie unicité email dans cet établissement
+        if ($data['role'] === 'responsable') {
+            if (empty($data['clinicName'])) {
+                return $this->json(['error' => 'Un responsable doit créer un établissement (clinicName requis).'], 400);
+            }
+            $clinic = new Clinic();
+            $clinic->setName($data['clinicName']);
+            if (!empty($data['clinicType']) && in_array($data['clinicType'], $allowedTypes, true)) {
+                $clinic->setType($data['clinicType']);
+            }
+            $em->persist($clinic);
+        }
         if ($userRepo->findOneBy(['email' => $data['email'], 'clinic' => $clinic])) {
             return $this->json(['error' => 'Cet email est déjà utilisé dans cet établissement.'], 409);
         }
@@ -106,15 +110,35 @@ final class AuthController extends AbstractController
             return $this->json(['error' => 'Erreur lors de la création du compte : ' . $e->getMessage()], 500);
         }
 
-        // Lier le user à un owner existant (même email + même clinique)
         $linking->linkUserToOwner($user, $clinic, $em);
 
-        // Prometheus : incrémente le compteur d'inscriptions par rôle (affiché dans Grafana)
         $this->prometheusRegistry
             ->getOrRegisterCounter('asv', 'user_register_total', 'Nombre d\'inscriptions', ['role'])
             ->inc([$user->getRole()]);
 
         return $this->json($serializer->serializeRegisterResponseUser($user), 201);
+    }
+
+    #[Route('/check-pending', methods: ['GET'])]
+    public function checkPending(Request $request, UserRepository $userRepo): JsonResponse
+    {
+        $email = $request->query->get('email', '');
+
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return $this->json(['pending' => false]);
+        }
+
+        $pendingUsers = $userRepo->findAllPendingByEmail($email);
+
+        if (empty($pendingUsers)) {
+            return $this->json(['pending' => false]);
+        }
+
+        return $this->json([
+            'pending' => true,
+            'name'    => $pendingUsers[0]->getName(),
+            'role'    => $pendingUsers[0]->getRole(),
+        ]);
     }
 
     #[Route('/login', methods: ['POST'])]
@@ -147,8 +171,8 @@ final class AuthController extends AbstractController
                 return $this->json([
                     'requiresClinicSelection' => true,
                     'clinics' => array_map(fn($u) => [
-                        'id' => $u->getClinic()?->getId(),
-                        'name' => $u->getClinic()?->getName() ?? 'Sans établissement',
+                        'id'   => $u->getClinic()?->getId(),
+                        'name' => $u->getClinic()?->getName(),
                     ], $users),
                 ]);
             }
@@ -156,7 +180,15 @@ final class AuthController extends AbstractController
             $user = $users[0] ?? null;
         }
 
-        if (!$user || !$hasher->isPasswordValid($user, $data['password'])) {
+        if (!$user) {
+            return $this->json(['error' => 'Identifiants invalides.'], 401);
+        }
+
+        if ($user->getPassword() === null) {
+            return $this->json(['error' => 'Ce compte n\'a pas encore été activé. Rendez-vous sur l\'écran d\'inscription pour définir votre mot de passe.'], 403);
+        }
+
+        if (!$hasher->isPasswordValid($user, $data['password'])) {
             return $this->json(['error' => 'Identifiants invalides.'], 401);
         }
 
