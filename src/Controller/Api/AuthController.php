@@ -2,14 +2,10 @@
 
 namespace App\Controller\Api;
 
-use App\Entity\Clinic;
 use App\Entity\User;
 use App\Repository\ClinicRepository;
 use App\Repository\UserRepository;
-use App\Constant\RoleConstants;
-use App\Service\ApiValidator;
 use App\Service\SerializerService;
-use App\Service\UserOwnerLinkingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Prometheus\CollectorRegistry;
@@ -33,9 +29,6 @@ final class AuthController extends AbstractController
         EntityManagerInterface $em,
         UserPasswordHasherInterface $hasher,
         UserRepository $userRepo,
-        ClinicRepository $clinicRepo,
-        ApiValidator $validator,
-        UserOwnerLinkingService $linking,
         SerializerService $serializer,
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
@@ -68,55 +61,8 @@ final class AuthController extends AbstractController
             return $this->json($serializer->serializeRegisterResponseUser($pendingUsers[0]), 201);
         }
 
-        // Flux B : inscription classique — seuls responsable et client sont autorisés
-        if ($error = $validator->validateUserCreate($data)) {
-            return $this->json(['error' => $error], 400);
-        }
-
-        if ($data['role'] !== 'responsable') {
-            return $this->json(['error' => 'Ce rôle doit être ajouté par un responsable depuis l\'application.'], 403);
-        }
-
-        $user = new User();
-        $user->setEmail($data['email']);
-        $user->setName($data['name']);
-        $user->setRole($data['role']);
-        $user->setPassword($hasher->hashPassword($user, $data['password']));
-
-        $allowedTypes = ['clinique', 'refuge', 'association'];
-        $clinic = null;
-
-        if ($data['role'] === 'responsable') {
-            if (empty($data['clinicName'])) {
-                return $this->json(['error' => 'Un responsable doit créer un établissement (clinicName requis).'], 400);
-            }
-            $clinic = new Clinic();
-            $clinic->setName($data['clinicName']);
-            if (!empty($data['clinicType']) && in_array($data['clinicType'], $allowedTypes, true)) {
-                $clinic->setType($data['clinicType']);
-            }
-            $em->persist($clinic);
-        }
-        if ($userRepo->findOneBy(['email' => $data['email'], 'clinic' => $clinic])) {
-            return $this->json(['error' => 'Cet email est déjà utilisé dans cet établissement.'], 409);
-        }
-
-        $user->setClinic($clinic);
-        $em->persist($user);
-
-        try {
-            $em->flush();
-        } catch (\Exception $e) {
-            return $this->json(['error' => 'Erreur lors de la création du compte : ' . $e->getMessage()], 500);
-        }
-
-        $linking->linkUserToOwner($user, $clinic, $em);
-
-        $this->prometheusRegistry
-            ->getOrRegisterCounter('asv', 'user_register_total', 'Nombre d\'inscriptions', ['role'])
-            ->inc([$user->getRole()]);
-
-        return $this->json($serializer->serializeRegisterResponseUser($user), 201);
+        // Flux B supprimé : les responsables sont désormais créés par le super admin via EasyAdmin
+        return $this->json(['error' => 'Inscription non autorisée. Contactez votre administrateur.'], 403);
     }
 
     #[Route('/check-pending', methods: ['GET'])]
