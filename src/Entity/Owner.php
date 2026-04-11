@@ -202,4 +202,15 @@ class Owner
         }
         return $this;
     }
+
+    public function anonymize(): static
+    {
+        $this->nom      = 'Supprimé';
+        $this->prenom   = 'Propriétaire';
+        $this->email    = 'supprime_' . $this->id . '@deleted.local';
+        $this->adresse  = null;
+        $this->telephone = null;
+        $this->clinics->clear();
+        return $this;
+    }
 }
