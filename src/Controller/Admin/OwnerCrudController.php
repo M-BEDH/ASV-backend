@@ -40,7 +40,7 @@ class OwnerCrudController extends AbstractCrudController
         yield TextField::new('prenom', 'Prénom');
         yield TextField::new('email', 'Email');
         yield TextField::new('telephone', 'Téléphone');
-        yield AssociationField::new('clinic', 'Établissement');
+        yield AssociationField::new('clinics', 'Établissement(s)');
         yield DateTimeField::new('createdAt', 'Créé le')
             ->setFormat('dd/MM/yyyy');
     }
