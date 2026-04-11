@@ -71,6 +71,11 @@ final class AnimalApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
+        // Bénévole : création autorisée uniquement dans un refuge ou une association
+        if ($me->getRole() === 'benevole' && !in_array($me->getClinic()?->getType(), ['refuge', 'association'], true)) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         $data = json_decode($request->getContent(), true);
 
         if (empty($data['nom']) || empty($data['espece'])) {
@@ -119,12 +124,17 @@ final class AnimalApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
+        // Bénévole : modification autorisée uniquement dans un refuge ou une association
+        if ($me->getRole() === 'benevole' && !in_array($me->getClinic()?->getType(), ['refuge', 'association'], true)) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         $animal = $repo->find($id);
         if (!$animal) {
             return $this->json(['error' => 'Animal introuvable.'], 404);
         }
 
-        if (!$this->memeClinic($animal)) {
+        if (!$this->doShowAnimal($animal)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -200,12 +210,17 @@ final class AnimalApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
+        // Bénévole : suppression autorisée uniquement dans un refuge ou une association
+        if ($me->getRole() === 'benevole' && !in_array($me->getClinic()?->getType(), ['refuge', 'association'], true)) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         $animal = $repo->find($id);
         if (!$animal) {
             return $this->json(['error' => 'Animal introuvable.'], 404);
         }
 
-        if (!$this->memeClinic($animal)) {
+        if (!$this->doShowAnimal($animal)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
