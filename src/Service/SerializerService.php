@@ -80,6 +80,7 @@ class SerializerService
             'email' => $u->getEmail(),
             'name' => $u->getName(),
             'role' => $u->getRole(),
+            'pending' => $u->getPassword() === null,
             'createdAt' => $u->getCreatedAt()?->format('c'),
         ];
     }
@@ -116,6 +117,7 @@ class SerializerService
             'role'       => $u->getRole(),
             'clinicId'   => $u->getClinic()?->getId(),
             'clinicName' => $u->getClinic()?->getName(),
+            'clinicType' => $u->getClinic()?->getType(),
         ];
     }
 
