@@ -3,17 +3,14 @@
 namespace App\Service;
 
 use App\Entity\Clinic;
-use App\Entity\Owner;
 use App\Entity\User;
 use App\Repository\OwnerRepository;
-use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 class UserOwnerLinkingService
 {
     public function __construct(
         private OwnerRepository $ownerRepo,
-        private UserRepository $userRepo,
     ) {
     }
 
