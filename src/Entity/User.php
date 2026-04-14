@@ -30,6 +30,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 20)]
     private ?string $role = null;
 
+    #[ORM\Column(name: 'is_vet', type: 'boolean', options: ['default' => false])]
+    private bool $isVet = false;
+
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $password = null;
 
@@ -87,10 +90,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getRoles(): array
     {
-        // assistant has same rights as veterinaire
         $symfonyRole = match ($this->role) {
             'super_admin'              => 'ROLE_SUPER_ADMIN',
-            'veterinaire', 'assistant' => 'ROLE_VETERINAIRE',
+            'veterinaire', 'assistant', 'responsable' => 'ROLE_VETERINAIRE',
             'client'                   => 'ROLE_CLIENT',
             default                    => 'ROLE_USER',
         };
@@ -101,6 +103,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function isSuperAdmin(): bool
     {
         return $this->role === 'super_admin';
+    }
+
+    public function isVet(): bool
+    {
+        return $this->isVet;
     }
 
     public function eraseCredentials(): void
@@ -154,6 +161,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setRole(string $role): static
     {
         $this->role = $role;
+        return $this;
+    }
+
+    public function setIsVet(bool $isVet): static
+    {
+        $this->isVet = $isVet;
         return $this;
     }
 
@@ -227,9 +240,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getNewClinicType(): ?string { return $this->newClinicType; }
     public function setNewClinicType(?string $v): static { $this->newClinicType = $v; return $this; }
 
+    // Anonymise les données d'un utilisateur (lors de la suppression d'un compte client)
     public function anonymize(): static
     {
         $this->name     = 'Utilisateur supprimé';
+        // On génère un email unique pour éviter les conflits d'unicité avec d'autres comptes supprimés
         $this->email    = 'supprime_' . $this->id . '@deleted.local';
         $this->password = bin2hex(random_bytes(32));
         $this->clinic   = null;
