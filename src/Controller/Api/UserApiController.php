@@ -73,6 +73,7 @@ final class UserApiController extends AbstractController
         $user->setEmail($data['email']);
         $user->setName($data['name']);
         $user->setRole($data['role']);
+        $user->setIsVet($data['role'] === 'veterinaire');
         $user->setClinic($clinic);
         // Pas de mot de passe : le compte sera activé lors de la première connexion du collaborateur
 
@@ -101,6 +102,7 @@ final class UserApiController extends AbstractController
                 return $this->json(['error' => 'Rôle invalide. Valeurs acceptées : ' . implode(', ', RoleConstants::ASSIGNABLE_BY_RESPONSABLE) . '.'], 400);
             }
             $user->setRole($data['role']);
+            $user->setIsVet($data['role'] === 'veterinaire');
         }
 
         if (isset($data['email'])) {
