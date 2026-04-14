@@ -9,6 +9,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
@@ -51,6 +52,7 @@ class UserCrudController extends AbstractCrudController
         }
 
         $entityInstance->setRole('responsable');
+        $entityInstance->setIsVet($entityInstance->isVet());
         $entityInstance->setPassword(null);
 
         parent::persistEntity($entityManager, $entityInstance);
@@ -80,6 +82,10 @@ class UserCrudController extends AbstractCrudController
             ])
             ->hideWhenCreating();
 
+        yield BooleanField::new('isVet', 'Vétérinaire ?')
+            ->renderAsSwitch(false)
+            ->hideOnForm();
+
         // Champs de création de la clinique — uniquement sur le formulaire NEW
         if ($pageName === Crud::PAGE_NEW) {
             yield TextField::new('newClinicName', 'Nom de l\'établissement');
@@ -89,6 +95,9 @@ class UserCrudController extends AbstractCrudController
                     'Refuge'      => 'refuge',
                     'Association' => 'association',
                 ]);
+            yield BooleanField::new('isVet', 'Le responsable est vétérinaire ?')
+                ->renderAsSwitch(false)
+                ->setHelp('Si "Non", ce responsable ne sera pas proposé dans la liste des vétérinaires.');
         }
 
         yield DateTimeField::new('createdAt', 'Créé le')
