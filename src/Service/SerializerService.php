@@ -80,6 +80,7 @@ class SerializerService
             'email' => $u->getEmail(),
             'name' => $u->getName(),
             'role' => $u->getRole(),
+            'isVet' => $u->isVet(),
             'pending' => $u->getPassword() === null,
             'createdAt' => $u->getCreatedAt()?->format('c'),
         ];
@@ -93,6 +94,7 @@ class SerializerService
             'email' => $u->getEmail(),
             'name' => $u->getName(),
             'role' => $u->getRole(),
+            'isVet' => $u->isVet(),
             'clinicId' => $u->getClinic()?->getId(),
         ];
     }
@@ -106,6 +108,7 @@ class SerializerService
                 'email'    => $u->getEmail(),
                 'name'     => $u->getName(),
                 'role'     => $u->getRole(),
+                'isVet'    => $u->isVet(),
                 'clinicIds' => $u->getClinics()->map(fn($c) => $c->getId())->toArray(),
             ];
         }
@@ -115,6 +118,7 @@ class SerializerService
             'email'      => $u->getEmail(),
             'name'       => $u->getName(),
             'role'       => $u->getRole(),
+            'isVet'      => $u->isVet(),
             'clinicId'   => $u->getClinic()?->getId(),
             'clinicName' => $u->getClinic()?->getName(),
             'clinicType' => $u->getClinic()?->getType(),
