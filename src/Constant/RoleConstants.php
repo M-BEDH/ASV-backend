@@ -9,4 +9,5 @@ class RoleConstants
     public const CAN_EDIT_CLINIC = ['responsable', 'veterinaire'];
     public const CAN_DELETE_USER           = ['responsable', 'veterinaire'];
     public const ASSIGNABLE_BY_RESPONSABLE = ['veterinaire', 'assistant', 'benevole'];
+    public const CONSULTATION_VETERINAIRE_ROLES = ['veterinaire', 'responsable'];
 }
