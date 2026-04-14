@@ -61,7 +61,7 @@ final class AuthController extends AbstractController
             return $this->json($serializer->serializeRegisterResponseUser($pendingUsers[0]), 201);
         }
 
-        // Flux B supprimé : les responsables sont désormais créés par le super admin via EasyAdmin
+        //   responsables créés par le super admin via EasyAdmin
         return $this->json(['error' => 'Inscription non autorisée. Contactez votre administrateur.'], 403);
     }
 
