@@ -2,6 +2,7 @@
 
 namespace App\Controller\Api;
 
+// use App\Constant\RoleConstants;
 use App\Entity\MedicalConsultation;
 use App\Entity\User;
 use App\Repository\AnimalRepository;
@@ -27,11 +28,20 @@ final class MedicalConsultationApiController extends AbstractController
         $me = $this->getUser();
 
         if ($me->getRole() === 'client') {
-            $owner = $ownerRepo->findOneBy(['email' => $me->getEmail()]);
-            if (!$owner) {
+            // Un client peut être propriétaire dans plusieurs cliniques → on récupère tous ses owners
+            $owners = $ownerRepo->findBy(['user' => $me]);
+
+            // Aucun owner trouvé → le client n'a aucun animal nulle part, liste vide sans requête inutile
+            if ($owners === []) {
                 return $this->json([]);
             }
-            $consultations = $repo->findByOwnerWithRelations($owner->getId());
+
+            // Extrait les IDs : array_map récupère les IDs, array_filter retire les null, array_values réindexe
+            $ownerIds = array_values(array_filter(array_map(fn($o) => $o->getId(), $owners)));
+
+            // Récupère toutes les consultations liées aux animaux de ces owners en une seule requête SQL
+            $consultations = $repo->findByOwnersWithRelations($ownerIds);
+
             return $this->json(array_map(fn($c) => $serializer->serializeConsultation($c), $consultations));
         }
 
@@ -91,7 +101,7 @@ final class MedicalConsultationApiController extends AbstractController
         $consultation->setTraitements($data['traitements'] ?? null);
         $consultation->setClinic($me->getClinic());
 
-        // Default to the authenticated user as veterinaire; allow override
+        // Default to the authenticated user as veterinaire; allow override / Par défaut, l'utilisateur authentifié est veterinaire ; Autoriser la dérogation
         $vetId = $data['veterinaireId'] ?? null;
         if ($vetId) {
             $vet = $userRepo->find($vetId);
@@ -162,6 +172,7 @@ final class MedicalConsultationApiController extends AbstractController
             }
         }
 
+        // array_key_et non isset pour détecter aussi le cas null explicite (isset retournerait false si la valeur est null).
         if (array_key_exists('veterinaireId', $data)) {
             if ($data['veterinaireId'] === null) {
                 $consultation->setVeterinaire(null);
@@ -170,6 +181,12 @@ final class MedicalConsultationApiController extends AbstractController
                 if (!$vet) {
                     return $this->json(['error' => 'Vétérinaire introuvable.'], 404);
                 }
+                // if ($vet->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+                //     return $this->json(['error' => 'Le vétérinaire doit appartenir au même établissement.'], 400);
+                // }
+                // if (!in_array($vet->getRole(), RoleConstants::CONSULTATION_VETERINAIRE_ROLES, true)) {
+                //     return $this->json(['error' => 'Le praticien sélectionné doit être vétérinaire ou responsable.'], 400);
+                // }
                 $consultation->setVeterinaire($vet);
             }
         }
