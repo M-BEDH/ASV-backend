@@ -36,6 +36,25 @@ class AnimalRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /** Retourne tous les animaux appartenant aux propriétaires spécifiés
+     * @param string[] $ownerIds
+     * @return Animal[]
+     */
+    public function findByOwnerIds(array $ownerIds): array
+    {
+        if ($ownerIds === []) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('a')
+            ->leftJoin('a.proprietaire', 'o')
+            ->addSelect('o')
+            ->where('o.id IN (:ownerIds)')
+            ->setParameter('ownerIds', $ownerIds)
+            ->getQuery()
+            ->getResult();
+    }
+
     //    /**
     //     * @return Animal[] Returns an array of Animal objects
     //     */
