@@ -67,6 +67,25 @@ abstract class ApiTestCase extends WebTestCase
         return $user;
     }
 
+    // Crée un pré-compte (password null) avec une clinique, prêt à être activé via /register
+    protected function createPendingUser(string $email = 'pending@test.com', string $role = 'veterinaire'): User
+    {
+        $clinic = new Clinic();
+        $clinic->setName('Clinique Pending');
+        $this->em->persist($clinic);
+
+        $user = new User();
+        $user->setEmail($email);
+        $user->setName('Pending User');
+        $user->setRole($role);
+        $user->setPassword(null);
+        $user->setClinic($clinic);
+        $this->em->persist($user);
+        $this->em->flush();
+
+        return $user;
+    }
+
     // Crée un utilisateur client (pas de clinique)
     protected function createUserClient(string $email = 'client@test.com', string $password = 'password'): User
     {
