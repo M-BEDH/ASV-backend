@@ -23,6 +23,7 @@ final class OwnerControllerTest extends ApiTestCase
         $data = $this->request('POST', '/api/owners', [
             'nom'    => 'Dupont',
             'prenom' => 'Jean',
+            'email'  => 'dupont@test.com',
         ], $token);
 
         self::assertResponseStatusCodeSame(201);
@@ -45,7 +46,7 @@ final class OwnerControllerTest extends ApiTestCase
         $vet = $this->createVet();
         $token = $this->getToken($vet->getEmail());
 
-        $created = $this->request('POST', '/api/owners', ['nom' => 'Dupont', 'prenom' => 'Jean'], $token);
+        $created = $this->request('POST', '/api/owners', ['nom' => 'Dupont', 'prenom' => 'Jean', 'email' => 'dupont@test.com'], $token);
         $updated = $this->request('PUT', '/api/owners/' . $created['id'], ['nom' => 'Martin'], $token);
 
         self::assertResponseStatusCodeSame(200);
@@ -57,7 +58,7 @@ final class OwnerControllerTest extends ApiTestCase
         $vet = $this->createVet();
         $token = $this->getToken($vet->getEmail());
 
-        $created = $this->request('POST', '/api/owners', ['nom' => 'Dupont', 'prenom' => 'Jean'], $token);
+        $created = $this->request('POST', '/api/owners', ['nom' => 'Dupont', 'prenom' => 'Jean', 'email' => 'dupont@test.com'], $token);
         $this->request('DELETE', '/api/owners/' . $created['id'], [], $token);
 
         self::assertResponseStatusCodeSame(204);
