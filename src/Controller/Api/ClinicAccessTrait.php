@@ -26,7 +26,10 @@ trait ClinicAccessTrait
     {
         /** @var User $me */
         $me = $this->getUser();
-        if ($me->isSuperAdmin() || $me->getRole() === 'client') return true;
+        if ($me->isSuperAdmin()) return true;
+        if ($me->getRole() === 'client') {
+            return $animal->getProprietaire()?->getUser()?->getId() === $me->getId();
+        }
         if ($me->getClinic() === null) return false;
         $owner = $animal->getProprietaire();
         return $owner ? $owner->hasClinic($me->getClinic()) : $this->memeClinic($animal);
@@ -37,7 +40,11 @@ trait ClinicAccessTrait
     {
         /** @var User $me */
         $me = $this->getUser();
-        if ($me->isSuperAdmin() || $me->getRole() === 'client') return true;
+        if ($me->isSuperAdmin()) return true;
+        if ($me->getRole() === 'client') {
+            $animal = $consultation->getAnimal();
+            return $animal ? $this->doShowAnimal($animal) : false;
+        }
         $animal = $consultation->getAnimal();
         return $animal ? $this->doShowAnimal($animal) : $this->memeClinic($consultation);
     }
