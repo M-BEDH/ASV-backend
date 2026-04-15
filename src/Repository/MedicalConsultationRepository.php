@@ -59,22 +59,23 @@ class MedicalConsultationRepository extends ServiceEntityRepository
 
     /**
      * Consultations visibles par une clinique :
-     * - animaux dont l'owner est lié à cette clinique
-     * - consultations sans animal mais créées par cette clinique
+        * - consultations rattachées à cette clinique
+        * - animaux dont l'owner est lié à cette clinique
      *
      * @return MedicalConsultation[]
      */
     public function findByClinicAccess(Clinic $clinic): array
     {
         return $this->createQueryBuilder('c')
+            ->distinct()
             ->leftJoin('c.animal', 'a')
             ->addSelect('a')
             ->leftJoin('c.veterinaire', 'v')
             ->addSelect('v')
             ->leftJoin('a.proprietaire', 'o')
             ->leftJoin('o.clinics', 'oc')
-            ->where('oc = :clinic')
-            ->orWhere('c.animal IS NULL AND c.clinic = :clinic')
+            ->where('c.clinic = :clinic')
+            ->orWhere('oc = :clinic')
             ->setParameter('clinic', $clinic)
             ->orderBy('c.dateConsultation', 'DESC')
             ->getQuery()
@@ -96,6 +97,30 @@ class MedicalConsultationRepository extends ServiceEntityRepository
             ->leftJoin('a.proprietaire', 'o')
             ->where('o.id = :ownerId')
             ->setParameter('ownerId', $ownerId)
+            ->orderBy('c.dateConsultation', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * @param string[] $ownerIds
+     * @return MedicalConsultation[]
+     */
+    public function findByOwnersWithRelations(array $ownerIds): array
+    {
+        if ($ownerIds === []) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('c')
+            ->distinct()
+            ->leftJoin('c.animal', 'a')
+            ->addSelect('a')
+            ->leftJoin('c.veterinaire', 'v')
+            ->addSelect('v')
+            ->leftJoin('a.proprietaire', 'o')
+            ->where('o.id IN (:ownerIds)')
+            ->setParameter('ownerIds', $ownerIds)
             ->orderBy('c.dateConsultation', 'DESC')
             ->getQuery()
             ->getResult();
