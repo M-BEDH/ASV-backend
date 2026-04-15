@@ -6,11 +6,12 @@ final class UserControllerTest extends ApiTestCase
 {
     public function testRegister(): void
     {
+        // Le flux register n'active que des pré-comptes (password null) créés par l'admin
+        $this->createPendingUser('new@test.com');
+
         $this->request('POST', '/api/auth/register', [
             'email'    => 'new@test.com',
-            'password' => 'password',
-            'name'     => 'Nouveau',
-            'role'     => 'veterinaire',
+            'password' => 'Password1!',
         ]);
 
         self::assertResponseStatusCodeSame(201);
@@ -18,6 +19,9 @@ final class UserControllerTest extends ApiTestCase
 
     public function testRegisterMissingFields(): void
     {
+        // Pré-compte existant mais sans mot de passe fourni → 400
+        $this->createPendingUser('test@test.com');
+
         $this->request('POST', '/api/auth/register', ['email' => 'test@test.com']);
 
         self::assertResponseStatusCodeSame(400);
@@ -25,23 +29,21 @@ final class UserControllerTest extends ApiTestCase
 
     public function testRegisterDuplicateEmail(): void
     {
-        // Premier enregistrement sans établissement
+        // Pré-compte activé une première fois, puis tentative de re-register → 403
+        $this->createPendingUser('dup@test.com');
+
         $this->request('POST', '/api/auth/register', [
             'email'    => 'dup@test.com',
-            'password' => 'password',
-            'name'     => 'Premier',
-            'role'     => 'veterinaire',
+            'password' => 'Password1!',
         ]);
 
-        // Deuxième enregistrement avec le même email, même contexte (sans établissement)
+        // Le compte est maintenant actif (plus pending) → inscription refusée
         $this->request('POST', '/api/auth/register', [
             'email'    => 'dup@test.com',
-            'password' => 'password',
-            'name'     => 'Doublon',
-            'role'     => 'veterinaire',
+            'password' => 'Password1!',
         ]);
 
-        self::assertResponseStatusCodeSame(409);
+        self::assertResponseStatusCodeSame(403);
     }
 
     public function testLogin(): void
