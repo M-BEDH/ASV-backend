@@ -67,12 +67,7 @@ final class AnimalApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'client') {
-            return $this->json(['error' => 'Accès refusé.'], 403);
-        }
-
-        // Bénévole : création autorisée uniquement dans un refuge ou une association
-        if ($me->getRole() === 'benevole' && !in_array($me->getClinic()?->getType(), ['refuge', 'association'], true)) {
+        if (!$this->canWrite()) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -120,12 +115,7 @@ final class AnimalApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'client') {
-            return $this->json(['error' => 'Accès refusé.'], 403);
-        }
-
-        // Bénévole : modification autorisée uniquement dans un refuge ou une association
-        if ($me->getRole() === 'benevole' && !in_array($me->getClinic()?->getType(), ['refuge', 'association'], true)) {
+        if (!$this->canWrite()) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -206,12 +196,7 @@ final class AnimalApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'client') {
-            return $this->json(['error' => 'Accès refusé.'], 403);
-        }
-
-        // Bénévole : suppression autorisée uniquement dans un refuge ou une association
-        if ($me->getRole() === 'benevole' && !in_array($me->getClinic()?->getType(), ['refuge', 'association'], true)) {
+        if (!$this->canWrite()) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 

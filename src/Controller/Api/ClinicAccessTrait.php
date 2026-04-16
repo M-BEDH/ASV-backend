@@ -49,6 +49,20 @@ trait ClinicAccessTrait
         return $animal ? $this->doShowAnimal($animal) : $this->memeClinic($consultation);
     }
 
+    // Peut créer / modifier / supprimer : tout le staff sauf client et bénévole hors refuge/asso
+    protected function canWrite(): bool
+    {
+        /** @var User $me */
+        $me = $this->getUser();
+
+        if ($me->isSuperAdmin()) return true;
+        if ($me->getRole() === 'client') return false;
+        if ($me->getRole() === 'benevole') {
+            return in_array($me->getClinic()?->getType(), ['refuge', 'association'], true);
+        }
+        return true;
+    }
+
     // Pour les entités multi-cliniques (Owner)
     protected function aUneClinicCommune(object $entity): bool
     {
