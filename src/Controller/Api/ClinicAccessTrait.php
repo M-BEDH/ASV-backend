@@ -63,8 +63,8 @@ trait ClinicAccessTrait
         return true;
     }
 
-    // Pour les entités multi-cliniques (Owner)
-    protected function aUneClinicCommune(object $entity): bool
+    // Vérifie que l'entité partage au moins une clinique avec l'utilisateur connecté (Owner multi-cliniques)
+    protected function hasSharedClinic(object $entity): bool
     {
         /** @var User $me */
         $me = $this->getUser();

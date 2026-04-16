@@ -180,7 +180,8 @@ final class OwnerApiController extends AbstractController
             return $owner->getUser()?->getId() === $me->getId();
         }
 
-        return $this->aUneClinicCommune($owner);
+        // Vérifie que le propriétaire partage au moins une clinique avec l'utilisateur connecté
+        return $this->hasSharedClinic($owner);
     }
 
     #[Route('/{id}', methods: ['PUT'])]
