@@ -68,6 +68,10 @@ final class OwnerApiController extends AbstractController
             return $this->json(['error' => $error], 400);
         }
 
+        if ($me->getRole() === 'benevole') {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         if ($me->getRole() === 'client') {
             $existing = $ownerRepo->findOneBy(['user' => $me]);
             if ($existing !== null) {
@@ -199,6 +203,11 @@ final class OwnerApiController extends AbstractController
 
         /** @var User $me */
         $me = $this->getUser();
+
+        if ($me->getRole() === 'benevole') {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         $data = json_decode($request->getContent(), true);
 
         if ($error = $validator->validateOwnerUpdate($data, $owner)) {
@@ -245,6 +254,13 @@ final class OwnerApiController extends AbstractController
         }
 
         if (!$this->canAccess($owner)) {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
+        /** @var User $me */
+        $me = $this->getUser();
+
+        if ($me->getRole() === 'benevole') {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 

@@ -78,7 +78,7 @@ final class MedicalConsultationApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'client') {
+        if ($me->getRole() === 'client' || $me->getRole() === 'benevole') {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -137,7 +137,7 @@ final class MedicalConsultationApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'client') {
+        if ($me->getRole() === 'client' || $me->getRole() === 'benevole') {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -207,7 +207,7 @@ final class MedicalConsultationApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'client') {
+        if ($me->getRole() === 'client' || $me->getRole() === 'benevole') {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
