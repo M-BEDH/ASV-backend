@@ -34,6 +34,7 @@ final class UserApiController extends AbstractController
     #[Route('/{id}', methods: ['GET'])]
     public function show(User $user, SerializerService $serializer): JsonResponse
     {
+        // Vérifie que l'utilisateur appartient à la même clinique que l'utilisateur connecté
         if (!$this->memeClinic($user)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
@@ -86,6 +87,7 @@ final class UserApiController extends AbstractController
     #[Route('/{id}', methods: ['PUT'])]
     public function update(Request $request, User $user, EntityManagerInterface $em, SerializerService $serializer): JsonResponse
     {
+        // Vérifie que l'utilisateur à modifier appartient à la même clinique que l'utilisateur connecté
         if (!$this->memeClinic($user)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
@@ -130,6 +132,7 @@ final class UserApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
+        // Vérifie que l'utilisateur à supprimer appartient à la même clinique que l'utilisateur connecté
         if (!$this->memeClinic($user)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }

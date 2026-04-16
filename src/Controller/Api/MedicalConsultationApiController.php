@@ -141,6 +141,7 @@ final class MedicalConsultationApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
+        // Vérifie que la consultation appartient à la même clinique que l'utilisateur connecté
         if (!$this->memeClinic($consultation)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
@@ -211,6 +212,7 @@ final class MedicalConsultationApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
+        // Vérifie que la consultation à supprimer appartient à la même clinique que l'utilisateur connecté
         if (!$this->memeClinic($consultation)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
