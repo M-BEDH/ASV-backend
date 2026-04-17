@@ -4,13 +4,12 @@ namespace App\Repository;
 
 use App\Entity\Clinic;
 use App\Entity\MedicalConsultation;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<MedicalConsultation>
+ * @extends AbstractClinicRepository<MedicalConsultation>
  */
-class MedicalConsultationRepository extends ServiceEntityRepository
+class MedicalConsultationRepository extends AbstractClinicRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
@@ -64,7 +63,7 @@ class MedicalConsultationRepository extends ServiceEntityRepository
      *
      * @return MedicalConsultation[]
      */
-    public function findByClinicAccess(Clinic $clinic): array
+    public function findByClinic(Clinic $clinic): array
     {
         return $this->createQueryBuilder('c')
             ->distinct()

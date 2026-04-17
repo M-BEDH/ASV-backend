@@ -4,13 +4,12 @@ namespace App\Repository;
 
 use App\Entity\Clinic;
 use App\Entity\Owner;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<Owner>
+ * @extends AbstractClinicRepository<Owner>
  */
-class OwnerRepository extends ServiceEntityRepository
+class OwnerRepository extends AbstractClinicRepository
 {
     public function __construct(ManagerRegistry $registry)
     {

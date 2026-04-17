@@ -47,7 +47,7 @@ final class MedicalConsultationApiController extends AbstractController
 
         $clinic = $me->getClinic();
         if (!$clinic) return $this->json([]);
-        $consultations = $repo->findByClinicAccess($clinic);
+        $consultations = $repo->findByClinic($clinic);
 
         return $this->json(array_map(fn($c) => $serializer->serializeConsultation($c), $consultations));
     }

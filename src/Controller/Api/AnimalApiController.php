@@ -36,7 +36,7 @@ final class AnimalApiController extends AbstractController
 
         $clinic = $me->getClinic();
         $animals = $clinic
-            ? $repo->findByClinicAccess($clinic)
+            ? $repo->findByClinic($clinic)
             : $repo->findBy(['clinic' => null]);
 
         return $this->json(array_map(fn($a) => $serializer->serializeAnimal($a), $animals));

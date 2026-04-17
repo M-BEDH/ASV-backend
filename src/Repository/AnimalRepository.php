@@ -4,13 +4,12 @@ namespace App\Repository;
 
 use App\Entity\Animal;
 use App\Entity\Clinic;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<Animal>
+ * @extends AbstractClinicRepository<Animal>
  */
-class AnimalRepository extends ServiceEntityRepository
+class AnimalRepository extends AbstractClinicRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
@@ -24,7 +23,7 @@ class AnimalRepository extends ServiceEntityRepository
      *
      * @return Animal[]
      */
-    public function findByClinicAccess(Clinic $clinic): array
+    public function findByClinic(Clinic $clinic): array
     {
         return $this->createQueryBuilder('a')
             ->leftJoin('a.proprietaire', 'o')
