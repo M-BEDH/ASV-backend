@@ -22,6 +22,14 @@ final class UserApiController extends AbstractController
     {
         /** @var \App\Entity\User $me */
         $me = $this->getUser();
+
+        // Un client n'a pas de clinic_id (il passe par user_clinic ManyToMany) :
+        // getClinic() retourne null → la requête tomberait sur findBy(['clinic' => null])
+        // et exposerait les comptes staff sans clinique assignée.
+        if ($me->getRole() === 'client') {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         $clinic = $me->getClinic();
 
         $users = $clinic
@@ -34,6 +42,15 @@ final class UserApiController extends AbstractController
     #[Route('/{id}', methods: ['GET'])]
     public function show(User $user, SerializerService $serializer): JsonResponse
     {
+        /** @var \App\Entity\User $me */
+        $me = $this->getUser();
+
+        // Même raison que index() : getClinic() null pour un client → null === null dans memeClinic()
+        // permettrait de voir un user sans clinique.
+        if ($me->getRole() === 'client') {
+            return $this->json(['error' => 'Accès refusé.'], 403);
+        }
+
         // Vérifie que l'utilisateur appartient à la même clinique que l'utilisateur connecté
         if (!$this->memeClinic($user)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
