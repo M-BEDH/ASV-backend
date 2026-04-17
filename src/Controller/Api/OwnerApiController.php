@@ -73,30 +73,7 @@ final class OwnerApiController extends AbstractController
         }
 
         if ($me->getRole() === 'client') {
-            $existing = $ownerRepo->findOneBy(['user' => $me]);
-            if ($existing !== null) {
-                return $this->json(['error' => 'Vous avez déjà un profil propriétaire.'], 409);
-            }
-
-            $owner = new Owner();
-            $owner->setNom($data['nom']);
-            $owner->setPrenom($data['prenom']);
-            $owner->setAdresse($data['adresse'] ?? null);
-            $owner->setTelephone($data['telephone'] ?? null);
-            $owner->setEmail($data['email']);
-            $owner->setCreatedBy($me);
-            $owner->setUser($me);
-            foreach ($me->getClinics() as $c) {
-                $owner->addClinic($c);
-            }
-            if (!empty($data['email']) && $data['email'] !== $me->getEmail()) {
-                $me->setEmail($data['email']);
-            }
-
-            $em->persist($owner);
-            $em->flush();
-
-            return $this->json($serializer->serializeOwner($owner), 201);
+            return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
         // Staff (véto, responsable, assistant...)
