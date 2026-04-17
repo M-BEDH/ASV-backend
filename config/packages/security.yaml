@@ -26,11 +26,11 @@ security:
                 default_target_path: /admin
                 username_parameter: _username
                 password_parameter: _password
-                enable_csrf: true
+                enable_csrf: true  
             logout:
                 path: admin_logout
                 target: admin_login
-        main:
+        api:
             lazy: true
             stateless: true
             provider: app_user_provider
