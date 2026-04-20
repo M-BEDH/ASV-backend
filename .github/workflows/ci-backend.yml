@@ -53,12 +53,6 @@ jobs:
         env:
           APP_ENV: test
 
-      # --no-scripts a sauté le cache:clear du post-install → il faut le faire manuellement pour que Symfony prenne en compte les nouvelles clés JWT
-    #  - name: Vider le cache Symfony
-     #   run: php bin/console cache:clear
-     #   env:
-     #     APP_ENV: test
-
       # Crée toutes les tables depuis les entités Doctrine (schema:create plutôt que migrations:migrate
       # car la migration initiale de création du schéma est absente de l'historique)
       - name: Créer le schéma de base de données
