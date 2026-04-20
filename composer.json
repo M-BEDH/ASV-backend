@@ -76,7 +76,8 @@
     "scripts": {
         "auto-scripts": {
             "cache:clear": "symfony-cmd",
-            "importmap:install": "symfony-cmd"
+            "importmap:install": "symfony-cmd",
+            "lint": "eslint . --ext .ts,.tsx"
         },
         "post-install-cmd": [
             "@auto-scripts"
