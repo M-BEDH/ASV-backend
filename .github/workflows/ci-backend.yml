@@ -59,9 +59,10 @@ jobs:
         env:
           APP_ENV: test
 
-      # Applique toutes les migrations Doctrine sur la base de test CI
-      - name: Appliquer les migrations
-        run: php bin/console doctrine:migrations:migrate --no-interaction
+      # Crée toutes les tables depuis les entités Doctrine (schema:create plutôt que migrations:migrate
+      # car la migration initiale de création du schéma est absente de l'historique)
+      - name: Créer le schéma de base de données
+        run: php bin/console doctrine:schema:create --no-interaction
         env:
           APP_ENV: test
           DATABASE_URL: mysql://ci_user:ci_password@127.0.0.1:3306/asv?serverVersion=8.0&charset=utf8mb4
