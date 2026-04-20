@@ -1,0 +1,66 @@
+name: CI Backend
+
+# Déclenchement à chaque push ou pull request sur master
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  backend-tests:
+    name: Tests PHPUnit (Symfony)
+    runs-on: ubuntu-latest
+
+    # Conteneur MySQL lancé en parallèle du job.
+    # Ces credentials sont uniquement pour l'environnement CI éphémère — pas la production.
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci_root
+          MYSQL_DATABASE: asv_test
+          MYSQL_USER: ci_user
+          MYSQL_PASSWORD: ci_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # Installe PHP 8.2 avec les extensions requises par Symfony et Doctrine
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo, pdo_mysql, intl, zip, apcu
+          coverage: none
+
+      # Installe les dépendances PHP déclarées dans composer.json
+      - name: Installer les dépendances Composer
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      # Génère la paire de clés RSA pour signer les JWT (ignorées par git, recrées à chaque run)
+      - name: Générer les clés JWT
+        run: php bin/console lexik:jwt:generate-keypair --skip-if-exists
+        env:
+          APP_ENV: test
+
+      # Applique toutes les migrations Doctrine sur la base de test CI
+      - name: Appliquer les migrations
+        run: php bin/console doctrine:migrations:migrate --no-interaction
+        env:
+          APP_ENV: test
+          DATABASE_URL: mysql://ci_user:ci_password@127.0.0.1:3306/asv_test?serverVersion=8.0&charset=utf8mb4
+
+      # Lance la suite complète de tests (unitaires + contrôleurs API)
+      - name: Lancer les tests PHPUnit
+        run: php bin/phpunit
+        env:
+          APP_ENV: test
+          DATABASE_URL: mysql://ci_user:ci_password@127.0.0.1:3306/asv_test?serverVersion=8.0&charset=utf8mb4
