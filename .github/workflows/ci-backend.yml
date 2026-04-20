@@ -43,7 +43,9 @@ jobs:
 
       # Installe les dépendances PHP déclarées dans composer.json
       - name: Installer les dépendances Composer
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+        # --no-scripts évite d'exécuter les post-install (importmap:install, cache:clear)
+        # qui ne sont pas nécessaires pour faire tourner les tests PHPUnit
+        run: composer install --no-scripts --no-interaction --prefer-dist --optimize-autoloader
 
       # Génère la paire de clés RSA pour signer les JWT (ignorées par git, recrées à chaque run)
       - name: Générer les clés JWT
