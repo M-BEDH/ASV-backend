@@ -35,14 +35,8 @@ class CreateSuperAdminCommand extends Command
         // Vérifie si un super admin existe déjà
         $existing = $this->userRepo->findOneBy(['role' => 'super_admin', 'clinic' => null]);
         if ($existing) {
-            $io->warning(sprintf(
-                'Un super admin existe déjà : %s (%s)',
-                $existing->getName(),
-                $existing->getEmail()
-            ));
-            if (!$io->confirm('Voulez-vous en créer un second ?', false)) {
-                return Command::SUCCESS;
-            }
+            $io->error('Un super administrateur existe déjà. Création impossible. Rapprochez-vous de l\'administrateur du site.');
+            return Command::FAILURE;
         }
 
         $email = $io->ask('Email', null, function (?string $value): string {
