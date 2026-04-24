@@ -41,7 +41,7 @@ final class AuthController extends AbstractController
             return $this->json(['error' => "Format d'email invalide."], 400);
         }
 
-        // Flux A : activation de tous les pré-comptes liés à cet email
+        // Activation de tous les pré-comptes liés à cet email
         $pendingUsers = $userRepo->findAllPendingByEmail($data['email']);
         if (!empty($pendingUsers)) {
             if (empty($data['password'])) {
