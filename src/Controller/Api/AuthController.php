@@ -22,7 +22,7 @@ final class AuthController extends AbstractController
         private CollectorRegistry $prometheusRegistry,
     ) {
     }
-
+#region register
     #[Route('/register', methods: ['POST'])]
     public function register(
         Request $request,
@@ -64,7 +64,8 @@ final class AuthController extends AbstractController
         //   responsables créés par le super admin via EasyAdmin
         return $this->json(['error' => 'Inscription non autorisée. Contactez votre administrateur.'], 403);
     }
-
+#endRegion
+#region checkPending
     #[Route('/check-pending', methods: ['GET'])]
     public function checkPending(Request $request, UserRepository $userRepo): JsonResponse
     {
@@ -86,7 +87,8 @@ final class AuthController extends AbstractController
             'role'    => $pendingUsers[0]->getRole(),
         ]);
     }
-
+#endRegion
+#region login
     #[Route('/login', methods: ['POST'])]
     public function login(
         Request $request,
@@ -137,7 +139,7 @@ final class AuthController extends AbstractController
         if (!$hasher->isPasswordValid($user, $data['password'])) {
             return $this->json(['error' => 'Identifiants invalides.'], 401);
         }
-
+#region increment prometheus
         // Prometheus : incrémente le compteur de connexions réussies par rôle (affiché dans Grafana)
         $this->prometheusRegistry
             ->getOrRegisterCounter('asv', 'user_login_total', 'Nombre de connexions réussies', ['role'])
@@ -145,7 +147,7 @@ final class AuthController extends AbstractController
 
         return $this->json($serializer->serializeLoginSuccessResponse($user, $jwtManager->create($user)));
     }
-
+#region /me serialize
     #[Route('/me', methods: ['GET'])]
     public function me(SerializerService $serializer): JsonResponse
     {
