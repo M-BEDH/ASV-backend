@@ -89,8 +89,9 @@ Le token JWT doit être passé dans le header `Authorization: Bearer <token>` po
 | Rôle | Accès |
 |---|---|
 | `super_admin` | Accès total toutes cliniques |
-| `admin` | Gestion de sa clinique |
-| `veterinaire` | Lecture/écriture dans sa clinique |
+| `responsable` | Gestion de sa clinique (modifier la clinique, supprimer des utilisateurs, assigner des rôles) |
+| `veterinaire` | Lecture/écriture dans sa clinique, peut créer des consultations, peut supprimer des utilisateurs |
+| `assistant` | Lecture/écriture dans sa clinique (même accès Symfony que `veterinaire`) |
 | `benevole` | Lecture/écriture dans refuges/associations uniquement |
 | `client` | Accès à ses propres animaux et consultations |
 
