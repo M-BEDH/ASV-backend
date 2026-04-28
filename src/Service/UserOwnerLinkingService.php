@@ -2,7 +2,7 @@
 
 namespace App\Service;
 
-use App\Entity\Clinic;
+
 use App\Entity\User;
 use App\Repository\OwnerRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -15,7 +15,7 @@ class UserOwnerLinkingService
     }
 
     // Appelé après l'inscription d'un client : relie le User à tous ses Owner existants
-    public function linkUserToOwner(User $user, ?Clinic $clinic, EntityManagerInterface $em): void
+    public function linkUserToOwner(User $user, EntityManagerInterface $em): void
     {
         if ($user->getRole() !== 'client') {
             return;
