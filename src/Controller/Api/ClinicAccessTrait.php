@@ -8,6 +8,8 @@ use App\Entity\User;
 
 trait ClinicAccessTrait
 {
+    abstract protected function getUser(): ?object;
+
     // Pour les entités avec une seule clinique (Animal, MedicalConsultation)
     protected function memeClinic(object $entity): bool
     {
