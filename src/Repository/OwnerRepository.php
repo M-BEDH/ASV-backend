@@ -16,21 +16,7 @@ class OwnerRepository extends AbstractClinicRepository
         parent::__construct($registry, Owner::class);
     }
 
-    //    /**
-    //     * @return Owner[] Returns an array of Owner objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('o')
-    //            ->andWhere('o.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('o.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
-
+  
     /** @return Owner[] */
     public function findByClinic(Clinic $clinic): array
     {
