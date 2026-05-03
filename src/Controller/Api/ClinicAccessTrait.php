@@ -22,7 +22,7 @@ trait ClinicAccessTrait
         return $entity->getClinic()?->getId() === $me->getClinic()?->getId();
     }
 
-    // Lecture d'un animal : client toujours autorisé, staff selon clinique de l'owner
+    // Un client ne voit que ses propres animaux. Le staff voit les animaux dont le propriétaire est rattaché à leur clinique
     protected function doShowAnimal(Animal $animal): bool
     {
         /** @var User $me */
