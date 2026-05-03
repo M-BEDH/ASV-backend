@@ -14,7 +14,7 @@ class UserOwnerLinkingService
     ) {
     }
 
-    // Appelé après l'inscription d'un client : relie le User à tous ses Owner existants
+    // Appelé après l'inscription d'un user, le relie le à tous ses Owner existants
     public function linkUserToOwner(User $user, EntityManagerInterface $em): void
     {
         if ($user->getRole() !== 'client') {
