@@ -242,6 +242,7 @@ final class OwnerApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
+        // anonymisation 
         $linkedUser = $owner->getUser();
         if ($linkedUser && $linkedUser->getRole() === 'client') {
             $linkedUser->anonymize();
