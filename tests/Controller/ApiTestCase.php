@@ -12,7 +12,7 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase; // permet de simuler des requêtes HTTP sans vrai serveur
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-abstract class ApiTestCase extends WebTestCase
+abstract class ApiTestCase extends WebTestCase // base des test avec ce qui est commun à tous (DRY)
 {
     protected KernelBrowser $client;
     protected EntityManagerInterface $em;
