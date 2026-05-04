@@ -209,7 +209,15 @@ final class AnimalApiController extends AbstractController
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
+        $owner = $animal->getProprietaire();
+
         $em->remove($animal);
+
+        // si plus d'animal alors delete de user + anonymise
+        if ($owner !== null && $owner->getAnimals()->count() === 1) {
+            $owner->anonymize();
+        }
+
         $em->flush();
 
         return $this->json(null, 204);
