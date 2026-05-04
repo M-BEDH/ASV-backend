@@ -6,11 +6,14 @@ final class AnimalControllerTest extends ApiTestCase
 {
     public function testList(): void
     {
+        // 1. ARRANGE — prépare le contexte
         $vet = $this->createVet();
         $token = $this->getToken($vet->getEmail());
 
+         // 2. ACT — exécute l'action à tester 
         $data = $this->request('GET', '/api/animals', [], $token);
 
+        // 3. ASSERT — vérifie le résultat
         self::assertResponseStatusCodeSame(200);
         self::assertIsArray($data);
     }
