@@ -14,8 +14,10 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 abstract class ApiTestCase extends WebTestCase // base des test avec ce qui est commun à tous (DRY)
 {
-    protected KernelBrowser $client;
+    protected KernelBrowser $client; 
+    // $client → simule un navigateur HTTP pour envoyer de vraies requetes vers les routes symfo pdt les tests
     protected EntityManagerInterface $em;
+    // $em → Entity Manager de Doctrine, pour manipuler la base directement (persist, flush, remove) sans passer par l'API
 
     protected function setUp(): void
     {
