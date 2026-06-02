@@ -97,6 +97,9 @@
     },
     "require-dev": {
         "doctrine/doctrine-fixtures-bundle": "*",
+        "phpstan/phpstan": "*",
+        "phpstan/phpstan-doctrine": "*",
+        "phpstan/phpstan-symfony": "*",
         "phpunit/phpunit": "^11.5",
         "symfony/browser-kit": "7.4.*",
         "symfony/debug-bundle": "7.4.*",
