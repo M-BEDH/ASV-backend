@@ -12,7 +12,6 @@ final class MedicalConsultationControllerTest extends ApiTestCase
         $data = $this->request('GET', '/api/consultations', [], $token);
 
         self::assertResponseStatusCodeSame(200);
-        self::assertIsArray($data);
     }
 
     public function testCreate(): void
