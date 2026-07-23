@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use App\Constant\RoleConstants;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -63,7 +64,7 @@ class CreateSuperAdminCommand extends Command
         $user = new User();
         $user->setEmail($email);
         $user->setName($name);
-        $user->setRole('super_admin');
+        $user->setRole(RoleConstants::SUPER_ADMIN);
         $user->setPassword($this->hasher->hashPassword($user, $password));
         // clinic = null : le super admin n'appartient à aucun établissement
 
