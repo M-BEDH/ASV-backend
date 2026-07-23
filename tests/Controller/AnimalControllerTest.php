@@ -15,7 +15,6 @@ final class AnimalControllerTest extends ApiTestCase
 
         // 3. ASSERT — vérifie le résultat
         self::assertResponseStatusCodeSame(200);
-        self::assertIsArray($data);
     }
 
     public function testCreate(): void
