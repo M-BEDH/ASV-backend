@@ -23,7 +23,9 @@ abstract class ApiTestCase extends WebTestCase // base des test avec ce qui est 
     {
         self::ensureKernelShutdown(); // Assure que le kernel est redémarré pour chaque test pour éviter les effets de bord (error token test MedicalConsultationControllerTest)
         $this->client = static::createClient();
-        $this->em = static::getContainer()->get('doctrine')->getManager();
+        $manager = static::getContainer()->get('doctrine')->getManager();
+        assert($manager instanceof EntityManagerInterface);
+        $this->em = $manager;
         $this->cleanDatabase();
     }
 
