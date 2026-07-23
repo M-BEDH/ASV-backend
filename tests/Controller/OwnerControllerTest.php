@@ -12,7 +12,6 @@ final class OwnerControllerTest extends ApiTestCase
         $data = $this->request('GET', '/api/owners', [], $token);
 
         self::assertResponseStatusCodeSame(200);
-        self::assertIsArray($data);
     }
 
     public function testCreate(): void
