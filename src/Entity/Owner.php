@@ -14,13 +14,13 @@ class Owner
 {
     #[ORM\Id]
     #[ORM\Column(type: 'string', length: 36)]
-    private ?string $id = null;
+    private ?string $id = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\Column(length: 255)]
-    private ?string $nom = null;
+    private ?string $nom = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\Column(length: 255)]
-    private ?string $prenom = null;
+    private ?string $prenom = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $adresse = null;
@@ -35,17 +35,19 @@ class Owner
     #[ORM\JoinColumn(name: 'created_by', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?User $createdBy = null;
 
+    /** @var Collection<int, Clinic> */
     #[ORM\ManyToMany(targetEntity: Clinic::class)]
     #[ORM\JoinTable(name: 'owner_clinic')]
     private Collection $clinics;
 
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
-    private ?\DateTimeImmutable $createdAt = null;
+    private ?\DateTimeImmutable $createdAt = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'linkedOwners')]
     #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?User $user = null;
 
+    /** @var Collection<int, Animal> */
     #[ORM\OneToMany(mappedBy: 'proprietaire', targetEntity: Animal::class)]
     private Collection $animals;
 

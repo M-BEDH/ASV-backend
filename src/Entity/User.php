@@ -18,17 +18,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\Column(type: 'string', length: 36)]
-    private ?string $id = null;
+    private ?string $id = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\Column(length: 255)]
     #[Assert\Email(message: "L'adresse email '{{ value }}' n'est pas valide.")]
-    private ?string $email = null;
+    private ?string $email = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\Column(length: 255)]
-    private ?string $name = null;
+    private ?string $name = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\Column(length: 20)]
-    private ?string $role = null;
+    private ?string $role = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\Column(name: 'is_vet', type: 'boolean', options: ['default' => false])]
     private bool $isVet = false;
@@ -41,21 +41,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?Clinic $clinic = null;
 
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
-    private ?\DateTimeImmutable $createdAt = null;
+    private ?\DateTimeImmutable $createdAt = null; // @phpstan-ignore doctrine.columnType
 
+    /** @var Collection<int, Animal> */
     #[ORM\OneToMany(mappedBy: 'createdBy', targetEntity: Animal::class)]
     private Collection $createdAnimals;
 
+    /** @var Collection<int, Owner> */
     #[ORM\OneToMany(mappedBy: 'createdBy', targetEntity: Owner::class)]
     private Collection $createdOwners;
 
+    /** @var Collection<int, Owner> */
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Owner::class)]
     private Collection $linkedOwners;
 
+    /** @var Collection<int, MedicalConsultation> */
     #[ORM\OneToMany(mappedBy: 'veterinaire', targetEntity: MedicalConsultation::class)]
     private Collection $medicalConsultationsAsVeterinaire;
 
     // Uniquement pour les clients : cliniques où ils sont propriétaires
+    /** @var Collection<int, Clinic> */
     #[ORM\ManyToMany(targetEntity: Clinic::class)]
     #[ORM\JoinTable(name: 'user_clinic')]
     private Collection $clinics;

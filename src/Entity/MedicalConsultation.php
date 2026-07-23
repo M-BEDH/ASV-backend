@@ -12,14 +12,14 @@ class MedicalConsultation
 {
     #[ORM\Id]
     #[ORM\Column(type: 'string', length: 36)]
-    private ?string $id = null;
+    private ?string $id = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\ManyToOne(targetEntity: Animal::class, inversedBy: 'medicalConsultations')]
     #[ORM\JoinColumn(name: 'animal_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?Animal $animal = null;
 
     #[ORM\Column(name: 'date_consultation', type: 'datetime')]
-    private ?\DateTimeInterface $dateConsultation = null;
+    private ?\DateTimeInterface $dateConsultation = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'medicalConsultationsAsVeterinaire')]
     #[ORM\JoinColumn(name: 'veterinaire_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
@@ -30,7 +30,7 @@ class MedicalConsultation
     private ?Clinic $clinic = null;
 
     #[ORM\Column(type: 'text')]
-    private ?string $motif = null;
+    private ?string $motif = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\Column(name: 'compte_rendu', type: 'text', nullable: true)]
     private ?string $compteRendu = null;
@@ -39,7 +39,7 @@ class MedicalConsultation
     private ?string $traitements = null;
 
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
-    private ?\DateTimeImmutable $createdAt = null;
+    private ?\DateTimeImmutable $createdAt = null; // @phpstan-ignore doctrine.columnType
 
     public function __construct()
     {

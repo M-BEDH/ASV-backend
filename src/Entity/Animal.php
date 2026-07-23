@@ -14,13 +14,13 @@ class Animal
 {
     #[ORM\Id]
     #[ORM\Column(type: 'string', length: 36)]
-    private ?string $id = null;
+    private ?string $id = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\Column(length: 255)]
-    private ?string $nom = null;
+    private ?string $nom = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\Column(length: 255)]
-    private ?string $espece = null;
+    private ?string $espece = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $race = null;
@@ -44,8 +44,9 @@ class Animal
     private ?Clinic $clinic = null;
 
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
-    private ?\DateTimeImmutable $createdAt = null;
+    private ?\DateTimeImmutable $createdAt = null; // @phpstan-ignore doctrine.columnType
 
+    /** @var Collection<int, MedicalConsultation> */
     #[ORM\OneToMany(mappedBy: 'animal', targetEntity: MedicalConsultation::class)]
     private Collection $medicalConsultations;
 

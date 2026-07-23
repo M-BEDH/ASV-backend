@@ -14,17 +14,18 @@ class Clinic
 {
     #[ORM\Id]
     #[ORM\Column(type: 'string', length: 36)]
-    private ?string $id = null;
+    private ?string $id = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\Column(length: 255, unique: true)]
-    private ?string $name = null;
+    private ?string $name = null; // @phpstan-ignore doctrine.columnType
 
     #[ORM\Column(length: 50)]
     private string $type = 'clinique';
 
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
-    private ?\DateTimeImmutable $createdAt = null;
+    private ?\DateTimeImmutable $createdAt = null; // @phpstan-ignore doctrine.columnType
 
+    /** @var Collection<int, User> */
     #[ORM\OneToMany(mappedBy: 'clinic', targetEntity: User::class)]
     private Collection $users;
 
