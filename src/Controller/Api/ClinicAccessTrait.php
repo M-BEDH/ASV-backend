@@ -2,6 +2,7 @@
 
 namespace App\Controller\Api;
 
+use App\Constant\RoleConstants;
 use App\Entity\Animal;
 use App\Entity\MedicalConsultation;
 use App\Entity\User;
@@ -28,7 +29,7 @@ trait ClinicAccessTrait
         /** @var User $me */
         $me = $this->getUser();
         if ($me->isSuperAdmin()) return true;
-        if ($me->getRole() === 'client') {
+        if ($me->getRole() === RoleConstants::CLIENT) {
             return $animal->getProprietaire()?->getUser()?->getId() === $me->getId();
         }
         if ($me->getClinic() === null) return false;
@@ -42,7 +43,7 @@ trait ClinicAccessTrait
         /** @var User $me */
         $me = $this->getUser();
         if ($me->isSuperAdmin()) return true;
-        if ($me->getRole() === 'client') {
+        if ($me->getRole() === RoleConstants::CLIENT) {
             $animal = $consultation->getAnimal();
             return $animal ? $this->doShowAnimal($animal) : false;
         }
@@ -57,8 +58,8 @@ trait ClinicAccessTrait
         $me = $this->getUser();
 
         if ($me->isSuperAdmin()) return true;
-        if ($me->getRole() === 'client') return false;
-        if ($me->getRole() === 'benevole') {
+        if ($me->getRole() === RoleConstants::CLIENT) return false;
+        if ($me->getRole() === RoleConstants::BENEVOLE) {
             return in_array($me->getClinic()?->getType(), ['refuge', 'association'], true);
         }
         return true;

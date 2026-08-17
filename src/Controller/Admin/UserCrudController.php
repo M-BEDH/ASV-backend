@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Constant\RoleConstants;
 use App\Entity\Clinic;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
@@ -51,7 +52,7 @@ class UserCrudController extends AbstractCrudController
             $entityInstance->setClinic($clinic);
         }
 
-        $entityInstance->setRole('responsable');
+        $entityInstance->setRole(RoleConstants::RESPONSABLE);
         $entityInstance->setIsVet($entityInstance->isVet());
         $entityInstance->setPassword(null);
 

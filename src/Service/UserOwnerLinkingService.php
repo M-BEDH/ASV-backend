@@ -3,6 +3,7 @@
 namespace App\Service;
 
 
+use App\Constant\RoleConstants;
 use App\Entity\User;
 use App\Repository\OwnerRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -17,7 +18,7 @@ class UserOwnerLinkingService
     // Appelé après l'inscription d'un user, le relie le à tous ses Owner existants
     public function linkUserToOwner(User $user, EntityManagerInterface $em): void
     {
-        if ($user->getRole() !== 'client') {
+        if ($user->getRole() !== RoleConstants::CLIENT) {
             return;
         }
 

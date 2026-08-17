@@ -2,6 +2,7 @@
 
 namespace App\Controller\Api;
 
+use App\Constant\RoleConstants;
 use App\Entity\Owner;
 use App\Entity\User;
 use App\Repository\OwnerRepository;
@@ -24,7 +25,7 @@ final class OwnerApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'client') {
+        if ($me->getRole() === RoleConstants::CLIENT) {
             $owners = $repo->findBy(['user' => $me]);
             return $this->json(array_map(fn($o) => $serializer->serializeOwner($o), $owners));
         }
@@ -68,11 +69,11 @@ final class OwnerApiController extends AbstractController
             return $this->json(['error' => $error], 400);
         }
 
-        if ($me->getRole() === 'benevole') {
+        if ($me->getRole() === RoleConstants::BENEVOLE) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
-        if ($me->getRole() === 'client') {
+        if ($me->getRole() === RoleConstants::CLIENT) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -93,13 +94,13 @@ final class OwnerApiController extends AbstractController
                     $linkedUser = new User();
                     $linkedUser->setEmail($data['email']);
                     $linkedUser->setName(trim($existing->getPrenom() . ' ' . $existing->getNom()));
-                    $linkedUser->setRole('client');
+                    $linkedUser->setRole(RoleConstants::CLIENT);
                     $em->persist($linkedUser);
                 }
                 $existing->setUser($linkedUser);
             }
 
-            if ($linkedUser->getRole() === 'client' && $clinic && !$linkedUser->hasClinic($clinic)) {
+            if ($linkedUser->getRole() === RoleConstants::CLIENT && $clinic && !$linkedUser->hasClinic($clinic)) {
                 $linkedUser->addClinic($clinic);
             }
 
@@ -128,14 +129,14 @@ final class OwnerApiController extends AbstractController
             $clientUser = new User();
             $clientUser->setEmail($data['email']);
             $clientUser->setName(trim($data['prenom'] . ' ' . $data['nom']));
-            $clientUser->setRole('client');
+            $clientUser->setRole(RoleConstants::CLIENT);
             if ($clinic) {
                 $clientUser->addClinic($clinic);
             }
             $owner->setUser($clientUser);
             $em->persist($clientUser);
             $em->flush();
-        } elseif ($existingUser->getRole() === 'client') {
+        } elseif ($existingUser->getRole() === RoleConstants::CLIENT) {
             if ($clinic && !$existingUser->hasClinic($clinic)) {
                 $existingUser->addClinic($clinic);
             }
@@ -153,7 +154,7 @@ final class OwnerApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'client') {
+        if ($me->getRole() === RoleConstants::CLIENT) {
             return $owner->getUser()?->getId() === $me->getId();
         }
 
@@ -182,7 +183,7 @@ final class OwnerApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'benevole') {
+        if ($me->getRole() === RoleConstants::BENEVOLE) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -201,7 +202,7 @@ final class OwnerApiController extends AbstractController
         // Synchronise le nom du User client avec celui de son Owner
         if (isset($data['nom']) || isset($data['prenom'])) {
             $linkedUser = $owner->getUser();
-            if ($linkedUser && $linkedUser->getRole() === 'client') {
+            if ($linkedUser && $linkedUser->getRole() === RoleConstants::CLIENT) {
                 $linkedUser->setName(trim(($data['prenom'] ?? $owner->getPrenom()) . ' ' . ($data['nom'] ?? $owner->getNom())));
             }
         }
@@ -213,7 +214,7 @@ final class OwnerApiController extends AbstractController
         }
         if (array_key_exists('email', $data)) {
             $owner->setEmail($data['email']);
-            if ($me->getRole() === 'client' && $data['email'] !== $me->getEmail()) {
+            if ($me->getRole() === RoleConstants::CLIENT && $data['email'] !== $me->getEmail()) {
                 $me->setEmail($data['email']);
             }
         }
@@ -238,13 +239,13 @@ final class OwnerApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'benevole') {
+        if ($me->getRole() === RoleConstants::BENEVOLE) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
         // anonymisation 
         $linkedUser = $owner->getUser();
-        if ($linkedUser && $linkedUser->getRole() === 'client') {
+        if ($linkedUser && $linkedUser->getRole() === RoleConstants::CLIENT) {
             $linkedUser->anonymize();
         }
 
