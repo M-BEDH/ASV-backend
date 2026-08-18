@@ -71,18 +71,11 @@ final class MedicalConsultationVoter extends Voter
         return $owner ? $owner->hasClinic($me->getClinic()) : $this->memeClinic($animal, $me);
     }
 
-    // Staff sauf client ; bénévole seulement dans un établissement refuge/association
+    // Staff sauf client et bénévole : la création/modification d'une consultation
+    // médicale reste réservée au vétérinaire, à l'assistant et au responsable.
     private function canWrite(User $me): bool
     {
-        if ($me->getRole() === RoleConstants::CLIENT) {
-            return false;
-        }
-
-        if ($me->getRole() === RoleConstants::BENEVOLE) {
-            return in_array($me->getClinic()?->getType(), ['refuge', 'association'], true);
-        }
-
-        return true;
+        return !in_array($me->getRole(), [RoleConstants::CLIENT, RoleConstants::BENEVOLE], true);
     }
 
     private function memeClinic(object $entity, User $me): bool
