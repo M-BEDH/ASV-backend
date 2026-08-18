@@ -55,6 +55,37 @@ final class MedicalConsultationControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
+    public function testCreateAsBenevoleInRefugeAllowed(): void
+    {
+        $benevole = $this->createBenevole('benevole-refuge@test.com', 'refuge');
+        $token = $this->getToken($benevole->getEmail());
+
+        $animal = $this->request('POST', '/api/animals', ['nom' => 'Rex', 'espece' => 'Chien'], $token);
+
+        $data = $this->request('POST', '/api/consultations', [
+            'animalId'         => $animal['id'],
+            'dateConsultation' => '2025-03-16 10:00',
+            'motif'            => 'Vaccin',
+        ], $token);
+
+        self::assertResponseStatusCodeSame(201);
+        self::assertSame('Vaccin', $data['motif']);
+    }
+
+    public function testCreateAsBenevoleInCliniqueForbidden(): void
+    {
+        $benevole = $this->createBenevole('benevole-clinique@test.com', 'clinique');
+        $token = $this->getToken($benevole->getEmail());
+
+        $this->request('POST', '/api/consultations', [
+            'animalId'         => 'some-id',
+            'dateConsultation' => '2025-03-16 10:00',
+            'motif'            => 'Vaccin',
+        ], $token);
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testUpdate(): void
     {
         $vet = $this->createVet();
