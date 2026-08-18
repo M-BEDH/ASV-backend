@@ -9,6 +9,7 @@ use App\Repository\AnimalRepository;
 use App\Repository\MedicalConsultationRepository;
 use App\Repository\OwnerRepository;
 use App\Repository\UserRepository;
+use App\Security\Voter\MedicalConsultationVoter;
 use App\Service\SerializerService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -19,8 +20,6 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/consultations')]
 final class MedicalConsultationApiController extends AbstractController
 {
-    use ClinicAccessTrait;
-
     #[Route('', methods: ['GET'])]
     public function index(MedicalConsultationRepository $repo, OwnerRepository $ownerRepo, SerializerService $serializer): JsonResponse
     {
@@ -60,7 +59,7 @@ final class MedicalConsultationApiController extends AbstractController
             return $this->json(['error' => 'Consultation introuvable.'], 404);
         }
 
-        if (!$this->doShowConsultation($consultation)) {
+        if (!$this->isGranted(MedicalConsultationVoter::VIEW, $consultation)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -78,7 +77,7 @@ final class MedicalConsultationApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === RoleConstants::CLIENT || $me->getRole() === RoleConstants::BENEVOLE) {
+        if (!$this->isGranted(MedicalConsultationVoter::CREATE)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -108,6 +107,12 @@ final class MedicalConsultationApiController extends AbstractController
             if (!$vet) {
                 return $this->json(['error' => 'Vétérinaire introuvable.'], 404);
             }
+            if ($vet->getClinic()?->getId() !== $me->getClinic()?->getId()) {
+                return $this->json(['error' => 'Le vétérinaire doit appartenir au même établissement.'], 400);
+            }
+            if (!$vet->isVet()) {
+                return $this->json(['error' => 'Le praticien sélectionné doit être vétérinaire.'], 400);
+            }
             $consultation->setVeterinaire($vet);
         } else {
             $consultation->setVeterinaire($me);
@@ -134,15 +139,7 @@ final class MedicalConsultationApiController extends AbstractController
             return $this->json(['error' => 'Consultation introuvable.'], 404);
         }
 
-        /** @var User $me */
-        $me = $this->getUser();
-
-        if ($me->getRole() === RoleConstants::CLIENT || $me->getRole() === RoleConstants::BENEVOLE) {
-            return $this->json(['error' => 'Accès refusé.'], 403);
-        }
-
-        // Vérifie que la consultation appartient à la même clinique que l'utilisateur connecté
-        if (!$this->memeClinic($consultation)) {
+        if (!$this->isGranted(MedicalConsultationVoter::EDIT, $consultation)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -182,12 +179,12 @@ final class MedicalConsultationApiController extends AbstractController
                 if (!$vet) {
                     return $this->json(['error' => 'Vétérinaire introuvable.'], 404);
                 }
-                // if ($vet->getClinic()?->getId() !== $me->getClinic()?->getId()) {
-                //     return $this->json(['error' => 'Le vétérinaire doit appartenir au même établissement.'], 400);
-                // }
-                // if (!in_array($vet->getRole(), RoleConstants::CONSULTATION_VETERINAIRE_ROLES, true)) {
-                //     return $this->json(['error' => 'Le praticien sélectionné doit être vétérinaire ou responsable.'], 400);
-                // }
+                if ($vet->getClinic()?->getId() !== $consultation->getClinic()?->getId()) {
+                    return $this->json(['error' => 'Le vétérinaire doit appartenir au même établissement.'], 400);
+                }
+                if (!$vet->isVet()) {
+                    return $this->json(['error' => 'Le praticien sélectionné doit être vétérinaire.'], 400);
+                }
                 $consultation->setVeterinaire($vet);
             }
         }
@@ -205,15 +202,7 @@ final class MedicalConsultationApiController extends AbstractController
             return $this->json(['error' => 'Consultation introuvable.'], 404);
         }
 
-        /** @var User $me */
-        $me = $this->getUser();
-
-        if ($me->getRole() === RoleConstants::CLIENT || $me->getRole() === RoleConstants::BENEVOLE) {
-            return $this->json(['error' => 'Accès refusé.'], 403);
-        }
-
-        // Vérifie que la consultation à supprimer appartient à la même clinique que l'utilisateur connecté
-        if (!$this->memeClinic($consultation)) {
+        if (!$this->isGranted(MedicalConsultationVoter::DELETE, $consultation)) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
