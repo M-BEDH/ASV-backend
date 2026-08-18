@@ -26,7 +26,7 @@ final class UserApiController extends AbstractController
         // Un client n'a pas de clinic_id (il passe par user_clinic ManyToMany) :
         // getClinic() retourne null → la requête tomberait sur findBy(['clinic' => null])
         // et exposerait les comptes staff sans clinique assignée.
-        if ($me->getRole() === 'client') {
+        if ($me->getRole() === RoleConstants::CLIENT) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -47,7 +47,7 @@ final class UserApiController extends AbstractController
 
         // Même raison que index() : getClinic() null pour un client → null === null dans memeClinic()
         // permettrait de voir un user sans clinique.
-        if ($me->getRole() === 'client') {
+        if ($me->getRole() === RoleConstants::CLIENT) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -65,7 +65,7 @@ final class UserApiController extends AbstractController
         /** @var \App\Entity\User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() !== 'responsable') {
+        if ($me->getRole() !== RoleConstants::RESPONSABLE) {
             return $this->json(['error' => 'Seul un responsable peut ajouter des collaborateurs.'], 403);
         }
 
@@ -114,7 +114,7 @@ final class UserApiController extends AbstractController
         if (isset($data['role'])) {
             /** @var \App\Entity\User $me */
             $me = $this->getUser();
-            if ($me->getRole() !== 'responsable') {
+            if ($me->getRole() !== RoleConstants::RESPONSABLE) {
                 return $this->json(['error' => 'Seul un responsable peut modifier le rôle d\'un collaborateur.'], 403);
             }
             if (!in_array($data['role'], RoleConstants::ASSIGNABLE_BY_RESPONSABLE, true)) {

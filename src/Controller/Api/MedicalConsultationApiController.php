@@ -2,7 +2,7 @@
 
 namespace App\Controller\Api;
 
-// use App\Constant\RoleConstants;
+use App\Constant\RoleConstants;
 use App\Entity\MedicalConsultation;
 use App\Entity\User;
 use App\Repository\AnimalRepository;
@@ -27,7 +27,7 @@ final class MedicalConsultationApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'client') {
+        if ($me->getRole() === RoleConstants::CLIENT) {
             // Un client peut être propriétaire dans plusieurs cliniques → on récupère tous ses owners
             $owners = $ownerRepo->findBy(['user' => $me]);
 
@@ -78,7 +78,7 @@ final class MedicalConsultationApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'client' || $me->getRole() === 'benevole') {
+        if ($me->getRole() === RoleConstants::CLIENT || $me->getRole() === RoleConstants::BENEVOLE) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -137,7 +137,7 @@ final class MedicalConsultationApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'client' || $me->getRole() === 'benevole') {
+        if ($me->getRole() === RoleConstants::CLIENT || $me->getRole() === RoleConstants::BENEVOLE) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 
@@ -208,7 +208,7 @@ final class MedicalConsultationApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'client' || $me->getRole() === 'benevole') {
+        if ($me->getRole() === RoleConstants::CLIENT || $me->getRole() === RoleConstants::BENEVOLE) {
             return $this->json(['error' => 'Accès refusé.'], 403);
         }
 

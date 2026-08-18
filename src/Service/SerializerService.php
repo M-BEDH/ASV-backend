@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Constant\RoleConstants;
 use App\Entity\Animal;
 use App\Entity\Clinic;
 use App\Entity\MedicalConsultation;
@@ -102,7 +103,7 @@ class SerializerService
     // Prometheus : sérialise les données d'un utilisateur pour la réponse de connexion et l'affichage dans Grafana
     public function serializeLoginResponseUser(User $u): array
     {
-        if ($u->getRole() === 'client') {
+        if ($u->getRole() === RoleConstants::CLIENT) {
             return [
                 'id'       => $u->getId(),
                 'email'    => $u->getEmail(),

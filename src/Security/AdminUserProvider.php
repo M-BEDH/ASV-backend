@@ -2,6 +2,7 @@
 
 namespace App\Security;
 
+use App\Constant\RoleConstants;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
@@ -19,7 +20,7 @@ class AdminUserProvider implements UserProviderInterface
             'clinic' => null,
         ]);
 
-        if (!$user || $user->getRole() !== 'super_admin') {
+        if (!$user || $user->getRole() !== RoleConstants::SUPER_ADMIN) {
             throw new UserNotFoundException(sprintf('Super admin "%s" introuvable.', $identifier));
         }
 

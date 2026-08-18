@@ -2,6 +2,7 @@
 
 namespace App\Controller\Api;
 
+use App\Constant\RoleConstants;
 use App\Entity\Animal;
 use App\Entity\User;
 use App\Repository\AnimalRepository;
@@ -25,7 +26,7 @@ final class AnimalApiController extends AbstractController
         /** @var User $me */
         $me = $this->getUser();
 
-        if ($me->getRole() === 'client') {
+        if ($me->getRole() === RoleConstants::CLIENT) {
             $owner = $ownerRepo->findOneBy(['email' => $me->getEmail()]);
             if (!$owner) {
                 return $this->json([]);
