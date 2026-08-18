@@ -4,7 +4,6 @@ namespace App\Controller\Api;
 
 use App\Constant\RoleConstants;
 use App\Entity\Animal;
-use App\Entity\MedicalConsultation;
 use App\Entity\User;
 
 trait ClinicAccessTrait
@@ -35,20 +34,6 @@ trait ClinicAccessTrait
         if ($me->getClinic() === null) return false;
         $owner = $animal->getProprietaire();
         return $owner ? $owner->hasClinic($me->getClinic()) : $this->memeClinic($animal);
-    }
-
-    // Lecture d'une consultation : client toujours autorisé, délègue à la visibilité de l'animal lié
-    protected function doShowConsultation(MedicalConsultation $consultation): bool
-    {
-        /** @var User $me */
-        $me = $this->getUser();
-        if ($me->isSuperAdmin()) return true;
-        if ($me->getRole() === RoleConstants::CLIENT) {
-            $animal = $consultation->getAnimal();
-            return $animal ? $this->doShowAnimal($animal) : false;
-        }
-        $animal = $consultation->getAnimal();
-        return $animal ? $this->doShowAnimal($animal) : $this->memeClinic($consultation);
     }
 
     // Peut créer / modifier / supprimer : tout le staff sauf client et bénévole hors refuge/asso
