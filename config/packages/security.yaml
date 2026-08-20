@@ -44,6 +44,7 @@ security:
         - { path: ^/api/auth/check-pending, roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api/clinics/by-email, roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api/clinics$,         roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/doc,              roles: PUBLIC_ACCESS }
         - { path: ^/api,                  roles: IS_AUTHENTICATED_FULLY }
 
 when@test:
