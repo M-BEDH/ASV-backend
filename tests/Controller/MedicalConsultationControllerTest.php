@@ -41,13 +41,29 @@ final class MedicalConsultationControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(400);
     }
 
+    // Le client ne peut jamais créer de consultation
     public function testCreateAsClientForbidden(): void
     {
         $client = $this->createUserClient();
         $token = $this->getToken($client->getEmail());
 
         $this->request('POST', '/api/consultations', [
-            'animalId'         => 'some-id',
+            'animalId'         => 'animal-id',
+            'dateConsultation' => '2025-03-16 10:00',
+            'motif'            => 'Vaccin',
+        ], $token);
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    // Le bénévole ne peut jamais créer de consultation
+    public function testCreateAsBenevoleForbidden(): void
+    {
+        $benevole = $this->createBenevole('benevole@test.com');
+        $token = $this->getToken($benevole->getEmail());
+
+        $this->request('POST', '/api/consultations', [
+            'animalId'         => 'animal-id',
             'dateConsultation' => '2025-03-16 10:00',
             'motif'            => 'Vaccin',
         ], $token);

@@ -12,7 +12,7 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase; // permet de simuler des requêtes HTTP sans vrai serveur
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-abstract class ApiTestCase extends WebTestCase // base des test avec ce qui est commun à tous (DRY)
+abstract class ApiTestCase extends WebTestCase // base des tests avec ce qui est commun à tous (DRY)
 {
     protected KernelBrowser $client; 
     // $client → simule un navigateur HTTP pour envoyer de vraies requetes vers les routes symfo pdt les tests
@@ -83,6 +83,28 @@ abstract class ApiTestCase extends WebTestCase // base des test avec ce qui est 
         $user->setName('Pending User');
         $user->setRole($role);
         $user->setPassword(null);
+        $user->setClinic($clinic);
+        $this->em->persist($user);
+        $this->em->flush();
+
+        return $user;
+    }
+
+    // Crée un bénévole rattaché à une clinique du type donné (clinique, refuge, association)
+    protected function createBenevole(string $email = 'benevole@test.com', string $clinicType = 'clinique', string $password = 'password'): User
+    {
+        $hasher = static::getContainer()->get(UserPasswordHasherInterface::class);
+
+        $clinic = new Clinic();
+        $clinic->setName('Clinique Benevole Test');
+        $clinic->setType($clinicType);
+        $this->em->persist($clinic);
+
+        $user = new User();
+        $user->setEmail($email);
+        $user->setName('Benevole Test');
+        $user->setRole('benevole');
+        $user->setPassword($hasher->hashPassword($user, $password));
         $user->setClinic($clinic);
         $this->em->persist($user);
         $this->em->flush();
