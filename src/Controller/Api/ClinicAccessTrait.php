@@ -32,6 +32,16 @@ trait ClinicAccessTrait
             return $animal->getProprietaire()?->getUser()?->getId() === $me->getId();
         }
         if ($me->getClinic() === null) return false;
+
+        // Refuge/association : un Owner n'est jamais rattaché à la structure,
+        // la visibilité staff reste basée sur Animal::getClinic() même après adoption.
+        if (\in_array($me->getClinic()->getType(), ['refuge', 'association'], true)) {
+        // correction phpStorm :  écrire \in_array(...) avec le backslash en préfixe, 
+        // pour dire explicitement à PHP "utilise directement la fonction globale", 
+        // ce qui évite la résolution de namespace et permet une petite optimisation.
+            return $this->memeClinic($animal);
+        }
+
         $owner = $animal->getProprietaire();
         return $owner ? $owner->hasClinic($me->getClinic()) : $this->memeClinic($animal);
     }
@@ -45,7 +55,8 @@ trait ClinicAccessTrait
         if ($me->isSuperAdmin()) return true;
         if ($me->getRole() === RoleConstants::CLIENT) return false;
         if ($me->getRole() === RoleConstants::BENEVOLE) {
-            return in_array($me->getClinic()?->getType(), ['refuge', 'association'], true);
+            return \in_array($me->getClinic()?->getType(), ['refuge', 'association'], true);
+        // correction phpStorm :  écrire \in_array(...) avec le backslash en préfixe, idem au dessus
         }
         return true;
     }
