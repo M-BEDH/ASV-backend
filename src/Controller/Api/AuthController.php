@@ -14,7 +14,9 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use OpenApi\Attributes as OA;
 
+#[OA\Tag(name: 'Auth')]
 #[Route('/api/auth')]
 final class AuthController extends AbstractController
 {
@@ -23,6 +25,33 @@ final class AuthController extends AbstractController
     ) {
     }
 #region register
+    #[OA\Post(
+        summary: 'Active un pré-compte (staff créé par un responsable/EasyAdmin, ou client créé via OwnerApiController) en définissant son mot de passe',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+                new OA\Property(property: 'password', type: 'string', description: 'Min 6 caractères, 1 majuscule, 1 minuscule, 1 chiffre, 1 caractère spécial'),
+            ])
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Compte(s) activé(s)',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'email', type: 'string'),
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'role', type: 'string'),
+                    new OA\Property(property: 'isVet', type: 'boolean'),
+                    new OA\Property(property: 'clinicId', type: 'string', format: 'uuid', nullable: true),
+                ])
+            ),
+            new OA\Response(response: 400, description: 'Email/mot de passe manquant ou invalide'),
+            new OA\Response(response: 403, description: 'Aucun pré-compte trouvé pour cet email'),
+        ]
+    )]
     #[Route('/register', methods: ['POST'])]
     public function register(
         Request $request,
@@ -66,6 +95,24 @@ final class AuthController extends AbstractController
     }
 #endRegion
 #region checkPending
+    #[OA\Get(
+        summary: 'Vérifie si un pré-compte en attente d\'activation existe pour cet email',
+        tags: ['Auth'],
+        parameters: [
+            new OA\Parameter(name: 'email', in: 'query', required: true, schema: new OA\Schema(type: 'string', format: 'email')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Résultat de la vérification',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'pending', type: 'boolean'),
+                    new OA\Property(property: 'name', type: 'string', nullable: true),
+                    new OA\Property(property: 'role', type: 'string', nullable: true),
+                ])
+            ),
+        ]
+    )]
     #[Route('/check-pending', methods: ['GET'])]
     public function checkPending(Request $request, UserRepository $userRepo): JsonResponse
     {
@@ -89,6 +136,46 @@ final class AuthController extends AbstractController
     }
 #endRegion
 #region login
+    #[OA\Post(
+        summary: 'Connexion. Si plusieurs comptes existent pour cet email (staff multi-clinique), demande de préciser clinicId',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+                new OA\Property(property: 'password', type: 'string'),
+                new OA\Property(property: 'clinicId', type: 'string', format: 'uuid', nullable: true, description: 'À fournir si requiresClinicSelection a été renvoyé lors d\'un précédent appel'),
+            ])
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Connexion réussie, ou choix de clinique requis',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(properties: [
+                        new OA\Property(property: 'requiresClinicSelection', type: 'boolean'),
+                        new OA\Property(property: 'clinics', type: 'array', items: new OA\Items(properties: [
+                            new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                            new OA\Property(property: 'name', type: 'string'),
+                        ])),
+                    ]),
+                    new OA\Schema(properties: [
+                        new OA\Property(property: 'token', type: 'string'),
+                        new OA\Property(property: 'user', type: 'object', description: 'Forme différente selon le rôle : client → clinicIds (array) ; staff → clinicId/clinicName/clinicType', properties: [
+                            new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                            new OA\Property(property: 'email', type: 'string'),
+                            new OA\Property(property: 'name', type: 'string'),
+                            new OA\Property(property: 'role', type: 'string'),
+                            new OA\Property(property: 'isVet', type: 'boolean'),
+                        ]),
+                    ]),
+                ])
+            ),
+            new OA\Response(response: 400, description: 'Email/mot de passe manquant ou invalide'),
+            new OA\Response(response: 401, description: 'Identifiants invalides'),
+            new OA\Response(response: 403, description: 'Compte pas encore activé (pré-compte)'),
+        ]
+    )]
     #[Route('/login', methods: ['POST'])]
     public function login(
         Request $request,
@@ -148,6 +235,24 @@ final class AuthController extends AbstractController
         return $this->json($serializer->serializeLoginSuccessResponse($user, $jwtManager->create($user)));
     }
 #region /me serialize
+    #[OA\Get(
+        summary: 'Retourne l\'utilisateur actuellement authentifié',
+        tags: ['Auth'],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Utilisateur courant (forme différente selon le rôle : client → clinicIds ; staff → clinicId/clinicName/clinicType)',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'email', type: 'string'),
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'role', type: 'string'),
+                    new OA\Property(property: 'isVet', type: 'boolean'),
+                ])
+            ),
+            new OA\Response(response: 401, description: 'Non authentifié'),
+        ]
+    )]
     #[Route('/me', methods: ['GET'])]
     public function me(SerializerService $serializer): JsonResponse
     {
