@@ -22,7 +22,7 @@ final class MedicalConsultationVoter extends Voter
             return $subject === null;
         }
 
-        return in_array($attribute, [self::VIEW, self::EDIT, self::DELETE], true)
+        return \in_array($attribute, [self::VIEW, self::EDIT, self::DELETE], true)
             && $subject instanceof MedicalConsultation;
     }
 
@@ -41,6 +41,7 @@ final class MedicalConsultationVoter extends Voter
             self::VIEW => $this->canView($subject, $me),
             self::CREATE => $this->canWrite($me),
             self::EDIT, self::DELETE => $this->canWrite($me) && $this->memeClinic($subject, $me),
+            default => false,
         };
     }
 
@@ -64,6 +65,12 @@ final class MedicalConsultationVoter extends Voter
 
         if ($me->getClinic() === null) {
             return false;
+        }
+
+        // Refuge/association : un Owner n'est jamais rattaché à la structure,
+        // la visibilité staff reste basée sur Animal::getClinic() même après adoption.
+        if (\in_array($me->getClinic()->getType(), ['refuge', 'association'], true)) {
+            return $this->memeClinic($animal, $me);
         }
 
         $owner = $animal->getProprietaire();
