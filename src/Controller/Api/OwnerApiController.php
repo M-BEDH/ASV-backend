@@ -14,11 +14,38 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
+use OpenApi\Attributes as OA;
 
+#[OA\Tag(name: 'Owners')]
 #[Route('/api/owners')]
 final class OwnerApiController extends AbstractController
 {
     use ClinicAccessTrait;
+
+    #[OA\Get(
+        summary: 'Liste les propriétaires (client : ses propres fiches ; staff : ceux de sa clinique, scopé côté serveur)',
+        tags: ['Owners'],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Liste des propriétaires',
+                content: new OA\JsonContent(type: 'array', items: new OA\Items(properties: [
+                    new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'nom', type: 'string'),
+                    new OA\Property(property: 'prenom', type: 'string'),
+                    new OA\Property(property: 'adresse', type: 'string', nullable: true),
+                    new OA\Property(property: 'telephone', type: 'string', nullable: true),
+                    new OA\Property(property: 'email', type: 'string'),
+                    new OA\Property(property: 'clinicIds', type: 'array', items: new OA\Items(type: 'string', format: 'uuid'), description: 'Jamais un refuge/association, seulement de vraies cliniques'),
+                    new OA\Property(property: 'createdBy', type: 'object', nullable: true, properties: [
+                        new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                        new OA\Property(property: 'name', type: 'string'),
+                    ]),
+                    new OA\Property(property: 'createdAt', type: 'string', format: 'date-time'),
+                ]))
+            ),
+        ]
+    )]
     #[Route('', methods: ['GET'])]
     public function index(OwnerRepository $repo, SerializerService $serializer): JsonResponse
     {
@@ -36,6 +63,28 @@ final class OwnerApiController extends AbstractController
         return $this->json(array_map(fn($o) => $serializer->serializeOwner($o), $owners));
     }
 
+    #[OA\Get(
+        summary: 'Récupère un propriétaire (client : soi-même ; staff : au moins une clinique partagée)',
+        tags: ['Owners'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Propriétaire',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'nom', type: 'string'),
+                    new OA\Property(property: 'prenom', type: 'string'),
+                    new OA\Property(property: 'email', type: 'string'),
+                    new OA\Property(property: 'clinicIds', type: 'array', items: new OA\Items(type: 'string', format: 'uuid')),
+                ])
+            ),
+            new OA\Response(response: 403, description: 'Accès refusé'),
+            new OA\Response(response: 404, description: 'Propriétaire introuvable'),
+        ]
+    )]
     #[Route('/{id}', methods: ['GET'])]
     public function show(string $id, OwnerRepository $repo, SerializerService $serializer): JsonResponse
     {
@@ -51,6 +100,44 @@ final class OwnerApiController extends AbstractController
         return $this->json($serializer->serializeOwner($owner));
     }
 
+    #[OA\Post(
+        summary: 'Crée un propriétaire (ou le rattache s\'il existe déjà par email). Jamais rattaché si la clinique créatrice est un refuge/association',
+        tags: ['Owners'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'nom', type: 'string'),
+                new OA\Property(property: 'prenom', type: 'string'),
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+                new OA\Property(property: 'adresse', type: 'string', nullable: true),
+                new OA\Property(property: 'telephone', type: 'string', nullable: true),
+            ])
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Propriétaire déjà existant, rattaché à la clinique le cas échéant',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'nom', type: 'string'),
+                    new OA\Property(property: 'prenom', type: 'string'),
+                    new OA\Property(property: 'clinicIds', type: 'array', items: new OA\Items(type: 'string', format: 'uuid')),
+                ])
+            ),
+            new OA\Response(
+                response: 201,
+                description: 'Nouveau propriétaire créé',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'nom', type: 'string'),
+                    new OA\Property(property: 'prenom', type: 'string'),
+                    new OA\Property(property: 'clinicIds', type: 'array', items: new OA\Items(type: 'string', format: 'uuid')),
+                ])
+            ),
+            new OA\Response(response: 400, description: 'Champs manquants/invalides, ou doublon email dans le même établissement'),
+            new OA\Response(response: 403, description: 'Accès refusé (client ou bénévole)'),
+        ]
+    )]
     #[Route('', methods: ['POST'])]
     public function create(
         Request $request,
@@ -79,28 +166,35 @@ final class OwnerApiController extends AbstractController
 
         // Staff (véto, responsable, assistant...)
         $clinic = $me->getClinic();
+        // Un Owner ne doit jamais être rattaché à un refuge/association, seulement à une vraie clinique
+        if ($clinic && $clinic->getType() !== 'clinique') {
+            $clinic = null;
+        }
 
-        // Si un Owner avec cet email existe déjà → on ajoute juste la clinique
+        // Si un Owner avec cet email existe déjà ET a déjà une vraie clinique → on ajoute juste la nouvelle clinique.
+        // Sinon (email inconnu, ou trouvé mais simple trace d'adoption en refuge sans clinique) → nouvel Owner,
+        // pour ne jamais faire hériter une clinique du passif d'un refuge.
         $existing = $ownerRepo->findOneBy(['email' => $data['email']]);
-        if ($existing !== null) {
+        if ($existing !== null && $existing->getClinics()->count() > 0) {
             if ($clinic && !$existing->hasClinic($clinic)) {
                 $existing->addClinic($clinic);
             }
 
             $linkedUser = $existing->getUser();
-            if (!$linkedUser) {
+            // Pas de précompte tant qu'aucune vraie clinique n'est impliquée (ex. refuge : simple trace d'adoption)
+            if (!$linkedUser && $clinic) {
                 $linkedUser = $userRepo->findOneBy(['email' => $data['email']]);
                 if (!$linkedUser) {
                     $linkedUser = new User();
                     $linkedUser->setEmail($data['email']);
-                    $linkedUser->setName(trim($existing->getPrenom() . ' ' . $existing->getNom()));
+                    $linkedUser->setName(trim(" {$existing->getNom()}"));
                     $linkedUser->setRole(RoleConstants::CLIENT);
                     $em->persist($linkedUser);
                 }
                 $existing->setUser($linkedUser);
             }
 
-            if ($linkedUser->getRole() === RoleConstants::CLIENT && $clinic && !$linkedUser->hasClinic($clinic)) {
+            if ($linkedUser && $linkedUser->getRole() === RoleConstants::CLIENT && $clinic && !$linkedUser->hasClinic($clinic)) {
                 $linkedUser->addClinic($clinic);
             }
 
@@ -124,19 +218,18 @@ final class OwnerApiController extends AbstractController
         $em->flush();
 
         // Pré-compte client : un seul User par email, multi-clinique via ManyToMany
+        // Pas de précompte tant qu'aucune vraie clinique n'est impliquée (ex. refuge : simple trace d'adoption)
         $existingUser = $userRepo->findOneBy(['email' => $data['email']]);
-        if (!$existingUser) {
+        if (!$existingUser && $clinic) {
             $clientUser = new User();
             $clientUser->setEmail($data['email']);
             $clientUser->setName(trim($data['prenom'] . ' ' . $data['nom']));
             $clientUser->setRole(RoleConstants::CLIENT);
-            if ($clinic) {
-                $clientUser->addClinic($clinic);
-            }
+            $clientUser->addClinic($clinic);
             $owner->setUser($clientUser);
             $em->persist($clientUser);
             $em->flush();
-        } elseif ($existingUser->getRole() === RoleConstants::CLIENT) {
+        } elseif ($existingUser !== null && $existingUser->getRole() === RoleConstants::CLIENT) {
             if ($clinic && !$existingUser->hasClinic($clinic)) {
                 $existingUser->addClinic($clinic);
             }
@@ -162,6 +255,36 @@ final class OwnerApiController extends AbstractController
         return $this->hasSharedClinic($owner);
     }
 
+    #[OA\Put(
+        summary: 'Modifie un propriétaire (interdit pour le bénévole)',
+        tags: ['Owners'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        requestBody: new OA\RequestBody(
+            content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'nom', type: 'string'),
+                new OA\Property(property: 'prenom', type: 'string'),
+                new OA\Property(property: 'adresse', type: 'string', nullable: true),
+                new OA\Property(property: 'telephone', type: 'string', nullable: true),
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+            ])
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Propriétaire mis à jour',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'nom', type: 'string'),
+                    new OA\Property(property: 'prenom', type: 'string'),
+                ])
+            ),
+            new OA\Response(response: 400, description: 'Email invalide ou déjà utilisé'),
+            new OA\Response(response: 403, description: 'Accès refusé (bénévole, ou pas de clinique partagée)'),
+            new OA\Response(response: 404, description: 'Propriétaire introuvable'),
+        ]
+    )]
     #[Route('/{id}', methods: ['PUT'])]
     public function update(
         string $id,
@@ -224,6 +347,18 @@ final class OwnerApiController extends AbstractController
         return $this->json($serializer->serializeOwner($owner));
     }
 
+    #[OA\Delete(
+        summary: 'Anonymise un propriétaire (soft delete), et le User client lié le cas échéant (interdit pour le bénévole)',
+        tags: ['Owners'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Anonymisé'),
+            new OA\Response(response: 403, description: 'Accès refusé (bénévole, ou pas de clinique partagée)'),
+            new OA\Response(response: 404, description: 'Propriétaire introuvable'),
+        ]
+    )]
     #[Route('/{id}', methods: ['DELETE'])]
     public function delete(string $id, OwnerRepository $repo, EntityManagerInterface $em): JsonResponse
     {

@@ -24,36 +24,12 @@ class AnimalTest extends TestCase
         // L'UUID est généré dans le constructeur, il ne doit pas être null
         self::assertNotNull($animal->getId());
 
-
-
-
-/*   ---
-  Lignes 28-31 — assertMatchesRegularExpression :
-  ▎ On vérifie que l'ID respecte exactement le format UUID v4. La regex peut faire peur mais c'est simple à lire par morceaux :
-
-  /^                        début de la chaîne
-    [0-9a-f]{8}             8 caractères hex        ex: a3f2c1d4
-    -                       tiret
-    [0-9a-f]{4}             4 caractères hex        ex: b2c1
-    -
-    4[0-9a-f]{3}            commence par 4 (version 4 de l'UUID)   ex: 4f3a
-    -
-    [89ab][0-9a-f]{3}       commence par 8, 9, a ou b (variante)   ex: a3f2
-    -
-    [0-9a-f]{12}            12 caractères hex       ex: d4e5f6a7b8c9
-  $/                        fin de la chaîne
-
-  Un UUID v4 ressemble à ça : a3f2c1d4-b2c1-4f3a-a3f2-d4e5f6a7b8c9
-
-  ---
-  Pourquoi c'est important pour le jury ?
-
-  Tu ne vérifies pas juste que l'ID existe — tu vérifies que c'est un vrai UUID v4 bien formé. Ça prouve que tu comprends le format de tes données, pas juste que "ça marche".*/
-
-
-
-
-        // Format UUID v4 : xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (36 caractères)
+        // Format UUID v4 : xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+        //   [0-9a-f]{8}-[0-9a-f]{4}-        8 puis 4 caractères hex
+        //   4[0-9a-f]{3}-                   commence par 4 (version 4)
+        //   [89ab][0-9a-f]{3}-              commence par 8, 9, a ou b (variante)
+        //   [0-9a-f]{12}                    12 caractères hex
+        // Exemple : a3f2c1d4-b2c1-4f3a-a3f2-d4e5f6a7b8c9
         self::assertMatchesRegularExpression(
             '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/',
             $animal->getId()
