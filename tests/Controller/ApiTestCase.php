@@ -50,18 +50,19 @@ abstract class ApiTestCase extends WebTestCase // base des tests avec ce qui est
         $this->em->flush();
     }
 
-    // Crée un vétérinaire avec sa clinique
-    protected function createVet(string $email = 'vet@test.com', string $password = 'password'): User
+    // Crée un vétérinaire avec sa clinique (type clinique, refuge ou association)
+    protected function createVet(string $email = 'vet@test.com', string $clinicType = 'clinique', string $password = 'password'): User
     {
         $hasher = static::getContainer()->get(UserPasswordHasherInterface::class);
 
         $clinic = new Clinic();
-        $clinic->setName('Clinique Test');
+        $clinic->setName("{$clinicType} Test");
+        $clinic->setType($clinicType);
         $this->em->persist($clinic);
 
         $user = new User();
         $user->setEmail($email);
-        $user->setName('Dr Test');
+        $user->setName("Dr Test{$clinicType}");
         $user->setRole('veterinaire');
         $user->setPassword($hasher->hashPassword($user, $password));
         $user->setClinic($clinic);
@@ -149,7 +150,7 @@ abstract class ApiTestCase extends WebTestCase // base des tests avec ce qui est
     {
         $headers = ['CONTENT_TYPE' => 'application/json'];
         if ($token) {
-            $headers['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
+            $headers['HTTP_AUTHORIZATION'] = "Bearer {$token}";
         }
 
         $this->client->request(
