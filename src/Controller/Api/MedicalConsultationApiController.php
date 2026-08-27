@@ -16,10 +16,40 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
+use OpenApi\Attributes as OA;
 
+#[OA\Tag(name: 'Consultations')]
 #[Route('/api/consultations')]
 final class MedicalConsultationApiController extends AbstractController
 {
+    #[OA\Get(
+        summary: 'Liste les consultations (client : celles de ses animaux, toutes cliniques ; staff : celles de sa clinique)',
+        tags: ['Consultations'],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Liste des consultations',
+                content: new OA\JsonContent(type: 'array', items: new OA\Items(properties: [
+                    new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'dateConsultation', type: 'string', format: 'date-time', nullable: true),
+                    new OA\Property(property: 'motif', type: 'string'),
+                    new OA\Property(property: 'compteRendu', type: 'string', nullable: true),
+                    new OA\Property(property: 'traitements', type: 'string', nullable: true),
+                    new OA\Property(property: 'clinicId', type: 'string', format: 'uuid', nullable: true),
+                    new OA\Property(property: 'animal', type: 'object', nullable: true, properties: [
+                        new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                        new OA\Property(property: 'nom', type: 'string'),
+                        new OA\Property(property: 'espece', type: 'string'),
+                    ]),
+                    new OA\Property(property: 'veterinaire', type: 'object', nullable: true, properties: [
+                        new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                        new OA\Property(property: 'name', type: 'string'),
+                    ]),
+                    new OA\Property(property: 'createdAt', type: 'string', format: 'date-time'),
+                ]))
+            ),
+        ]
+    )]
     #[Route('', methods: ['GET'])]
     public function index(MedicalConsultationRepository $repo, OwnerRepository $ownerRepo, SerializerService $serializer): JsonResponse
     {
@@ -51,6 +81,28 @@ final class MedicalConsultationApiController extends AbstractController
         return $this->json(array_map(fn($c) => $serializer->serializeConsultation($c), $consultations));
     }
 
+    #[OA\Get(
+        summary: 'Récupère une consultation (MedicalConsultationVoter::VIEW — mêmes règles que l\'animal concerné)',
+        tags: ['Consultations'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Consultation',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'dateConsultation', type: 'string', format: 'date-time', nullable: true),
+                    new OA\Property(property: 'motif', type: 'string'),
+                    new OA\Property(property: 'compteRendu', type: 'string', nullable: true),
+                    new OA\Property(property: 'traitements', type: 'string', nullable: true),
+                ])
+            ),
+            new OA\Response(response: 403, description: 'Accès refusé'),
+            new OA\Response(response: 404, description: 'Consultation introuvable'),
+        ]
+    )]
     #[Route('/{id}', methods: ['GET'])]
     public function show(string $id, MedicalConsultationRepository $repo, SerializerService $serializer): JsonResponse
     {
@@ -66,6 +118,35 @@ final class MedicalConsultationApiController extends AbstractController
         return $this->json($serializer->serializeConsultation($consultation));
     }
 
+    #[OA\Post(
+        summary: 'Crée une consultation médicale (MedicalConsultationVoter::CREATE — réservé véto/assistant/responsable, jamais client ni bénévole)',
+        tags: ['Consultations'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'animalId', type: 'string', format: 'uuid'),
+                new OA\Property(property: 'dateConsultation', type: 'string', format: 'date-time'),
+                new OA\Property(property: 'motif', type: 'string'),
+                new OA\Property(property: 'compteRendu', type: 'string', nullable: true),
+                new OA\Property(property: 'traitements', type: 'string', nullable: true),
+                new OA\Property(property: 'veterinaireId', type: 'string', format: 'uuid', nullable: true, description: 'Par défaut, l\'utilisateur connecté. Doit être vétérinaire, même clinique'),
+            ])
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Consultation créée',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'motif', type: 'string'),
+                    new OA\Property(property: 'dateConsultation', type: 'string', format: 'date-time', nullable: true),
+                ])
+            ),
+            new OA\Response(response: 400, description: 'Champs manquants, ou vétérinaire invalide/hors clinique'),
+            new OA\Response(response: 403, description: 'Accès refusé'),
+            new OA\Response(response: 404, description: 'Animal ou vétérinaire introuvable'),
+        ]
+    )]
     #[Route('', methods: ['POST'])]
     public function create(
         Request $request,
@@ -87,6 +168,12 @@ final class MedicalConsultationApiController extends AbstractController
             return $this->json(['error' => 'Les champs animalId, dateConsultation et motif sont obligatoires.'], 400);
         }
 
+        try {
+            $dateConsultation = new \DateTime($data['dateConsultation']);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Format de date invalide.'], 400);
+        }
+
         $animal = $animalRepo->find($data['animalId']);
         if (!$animal) {
             return $this->json(['error' => 'Animal introuvable.'], 404);
@@ -95,7 +182,7 @@ final class MedicalConsultationApiController extends AbstractController
         $consultation = new MedicalConsultation();
         $consultation->setAnimal($animal);
         $consultation->setMotif($data['motif']);
-        $consultation->setDateConsultation(new \DateTime($data['dateConsultation']));
+        $consultation->setDateConsultation($dateConsultation);
         $consultation->setCompteRendu($data['compteRendu'] ?? null);
         $consultation->setTraitements($data['traitements'] ?? null);
         $consultation->setClinic($me->getClinic());
@@ -124,6 +211,35 @@ final class MedicalConsultationApiController extends AbstractController
         return $this->json($serializer->serializeConsultation($consultation), 201);
     }
 
+    #[OA\Put(
+        summary: 'Modifie une consultation médicale (MedicalConsultationVoter::EDIT — canWrite() + même clinique)',
+        tags: ['Consultations'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        requestBody: new OA\RequestBody(
+            content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'motif', type: 'string'),
+                new OA\Property(property: 'dateConsultation', type: 'string', format: 'date-time'),
+                new OA\Property(property: 'compteRendu', type: 'string', nullable: true),
+                new OA\Property(property: 'traitements', type: 'string', nullable: true),
+                new OA\Property(property: 'animalId', type: 'string', format: 'uuid', nullable: true),
+                new OA\Property(property: 'veterinaireId', type: 'string', format: 'uuid', nullable: true),
+            ])
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Consultation mise à jour',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'motif', type: 'string'),
+                ])
+            ),
+            new OA\Response(response: 403, description: 'Accès refusé'),
+            new OA\Response(response: 404, description: 'Consultation, animal ou vétérinaire introuvable'),
+        ]
+    )]
     #[Route('/{id}', methods: ['PUT'])]
     public function update(
         string $id,
@@ -149,7 +265,11 @@ final class MedicalConsultationApiController extends AbstractController
             $consultation->setMotif($data['motif']);
         }
         if (isset($data['dateConsultation'])) {
-            $consultation->setDateConsultation(new \DateTime($data['dateConsultation']));
+            try {
+                $consultation->setDateConsultation(new \DateTime($data['dateConsultation']));
+            } catch (\Exception $e) {
+                return $this->json(['error' => 'Format de date invalide.'], 400);
+            }
         }
         if (array_key_exists('compteRendu', $data)) {
             $consultation->setCompteRendu($data['compteRendu']);
@@ -194,6 +314,18 @@ final class MedicalConsultationApiController extends AbstractController
         return $this->json($serializer->serializeConsultation($consultation));
     }
 
+    #[OA\Delete(
+        summary: 'Supprime une consultation médicale (MedicalConsultationVoter::DELETE — canWrite() + même clinique)',
+        tags: ['Consultations'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Supprimée'),
+            new OA\Response(response: 403, description: 'Accès refusé'),
+            new OA\Response(response: 404, description: 'Consultation introuvable'),
+        ]
+    )]
     #[Route('/{id}', methods: ['DELETE'])]
     public function delete(string $id, MedicalConsultationRepository $repo, EntityManagerInterface $em): JsonResponse
     {
