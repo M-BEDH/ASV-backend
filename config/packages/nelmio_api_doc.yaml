@@ -2,7 +2,7 @@ nelmio_api_doc:
     documentation:
         info:
             title: ASV API
-            description: API de suivi vétérinaire (cliniques, refuges, associations)
+            description: API de suivi vétérinaire (cliniques, refuges, associations, particuliers)
             version: 1.0.0
         components:
             securitySchemes:
