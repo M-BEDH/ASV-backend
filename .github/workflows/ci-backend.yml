@@ -53,10 +53,10 @@ jobs:
         env:
           APP_ENV: test
 
-      # Crée toutes les tables depuis les entités Doctrine (schema:create plutôt que migrations:migrate
-      # car la migration initiale de création du schéma est absente de l'historique)
+      # Rejoue la chaîne complète de migrations (genèse incluse depuis Version20260301000000)
+      # sur la base MySQL éphémère du service ci-dessus.
       - name: Créer le schéma de base de données
-        run: php bin/console doctrine:schema:create --no-interaction
+        run: php bin/console doctrine:migrations:migrate --no-interaction
         env:
           APP_ENV: test
           DATABASE_URL: mysql://ci_user:ci_password@127.0.0.1:3306/asv?serverVersion=8.0&charset=utf8mb4

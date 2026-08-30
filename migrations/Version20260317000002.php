@@ -11,13 +11,13 @@ final class Version20260317000002 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'Mise à jour contrainte CHECK role : ajout responsable et benevole';
+        return 'Mise à jour contrainte CHECK role : ajout responsable, benevole et super_admin';
     }
 
     public function up(Schema $schema): void
     {
         $this->addSql('ALTER TABLE users DROP CONSTRAINT chk_user_role');
-        $this->addSql("ALTER TABLE users ADD CONSTRAINT chk_user_role CHECK (role IN ('client', 'veterinaire', 'responsable', 'assistant', 'benevole'))");
+        $this->addSql("ALTER TABLE users ADD CONSTRAINT chk_user_role CHECK (role IN ('client', 'veterinaire', 'responsable', 'assistant', 'benevole', 'super_admin'))");
     }
 
     public function down(Schema $schema): void
