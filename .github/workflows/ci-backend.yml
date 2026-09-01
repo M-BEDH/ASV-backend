@@ -9,7 +9,7 @@ on:
 
 jobs:
   backend-tests:
-    name: Tests PHPUnit (Symfony)
+    name: Tests PHPUnit + PHPStan (Symfony)
     runs-on: ubuntu-latest
 
     # Conteneur MySQL lancé en parallèle du job.
@@ -46,6 +46,11 @@ jobs:
         # --no-scripts évite d'exécuter les post-install (importmap:install, cache:clear)
         # qui ne sont pas nécessaires pour faire tourner les tests PHPUnit
         run: composer install --no-scripts --no-interaction --prefer-dist --optimize-autoloader
+
+      # Analyse statique (niveau 5, extensions Symfony/Doctrine) — ne nécessite ni BDD ni clés JWT
+      # --memory-limit évite un crash du worker parallèle (limite CLI par défaut trop basse, 128M)
+      - name: Analyse statique PHPStan
+        run: php vendor/bin/phpstan analyse --no-progress --memory-limit=512M
 
       # Génère la paire de clés RSA pour signer les JWT (ignorées par git, recrées à chaque run)
       - name: Générer les clés JWT
