@@ -31,6 +31,55 @@ final class MedicalConsultationControllerTest extends ApiTestCase
         self::assertSame('Vaccin', $data['motif']);
     }
 
+    public function testShow(): void
+    {
+        $vet = $this->createVet();
+        $token = $this->getToken($vet->getEmail());
+
+        $animal = $this->request('POST', '/api/animals', ['nom' => 'Rex', 'espece' => 'Chien'], $token);
+        $created = $this->request('POST', '/api/consultations', [
+            'animalId'         => $animal['id'],
+            'dateConsultation' => '2025-03-16 10:00',
+            'motif'            => 'Vaccin',
+        ], $token);
+
+        $data = $this->request('GET', '/api/consultations/' . $created['id'], [], $token);
+
+        self::assertResponseStatusCodeSame(200);
+        self::assertSame('Vaccin', $data['motif']);
+    }
+
+    public function testShowNotFound(): void
+    {
+        $vet = $this->createVet();
+        $token = $this->getToken($vet->getEmail());
+
+        $this->request('GET', '/api/consultations/inexistant-id', [], $token);
+
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    // MedicalConsultationVoter::canViewAnimal() refuse l'accès entre deux cliniques distinctes
+    public function testShowForbiddenDifferentClinic(): void
+    {
+        $vetA = $this->createVet('vet-a@test.com');
+        $tokenA = $this->getToken($vetA->getEmail());
+
+        $animal = $this->request('POST', '/api/animals', ['nom' => 'Rex', 'espece' => 'Chien'], $tokenA);
+        $created = $this->request('POST', '/api/consultations', [
+            'animalId'         => $animal['id'],
+            'dateConsultation' => '2025-03-16 10:00',
+            'motif'            => 'Vaccin',
+        ], $tokenA);
+
+        $vetB = $this->createVet('vet-b@test.com', 'refuge');
+        $tokenB = $this->getToken($vetB->getEmail());
+
+        $this->request('GET', '/api/consultations/' . $created['id'], [], $tokenB);
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testCreateMissingFields(): void
     {
         $vet = $this->createVet();
