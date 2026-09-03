@@ -90,6 +90,24 @@ final class MedicalConsultationControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(400);
     }
 
+    // L'assistant a les mêmes droits d'écriture que le vétérinaire sur les consultations (MedicalConsultationVoter::canWrite())
+    public function testCreateAsAssistantAllowed(): void
+    {
+        $assistant = $this->createAssistant();
+        $token = $this->getToken($assistant->getEmail());
+
+        $animal = $this->request('POST', '/api/animals', ['nom' => 'Rex', 'espece' => 'Chien'], $token);
+
+        $data = $this->request('POST', '/api/consultations', [
+            'animalId'         => $animal['id'],
+            'dateConsultation' => '2025-03-16 10:00',
+            'motif'            => 'Vaccin',
+        ], $token);
+
+        self::assertResponseStatusCodeSame(201);
+        self::assertSame('Vaccin', $data['motif']);
+    }
+
     // Le client ne peut jamais créer de consultation
     public function testCreateAsClientForbidden(): void
     {

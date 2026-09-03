@@ -113,6 +113,28 @@ abstract class ApiTestCase extends WebTestCase // base des tests avec ce qui est
         return $user;
     }
 
+    // Crée un assistant rattaché à une clinique du type donné (clinique, refuge, association)
+    protected function createAssistant(string $email = 'assistant@test.com', string $clinicType = 'clinique', string $password = 'password'): User
+    {
+        $hasher = static::getContainer()->get(UserPasswordHasherInterface::class);
+
+        $clinic = new Clinic();
+        $clinic->setName('Clinique Assistant Test');
+        $clinic->setType($clinicType);
+        $this->em->persist($clinic);
+
+        $user = new User();
+        $user->setEmail($email);
+        $user->setName('Assistant Test');
+        $user->setRole('assistant');
+        $user->setPassword($hasher->hashPassword($user, $password));
+        $user->setClinic($clinic);
+        $this->em->persist($user);
+        $this->em->flush();
+
+        return $user;
+    }
+
     // Crée un utilisateur client (pas de clinique)
     protected function createUserClient(string $email = 'client@test.com', string $password = 'password'): User
     {
