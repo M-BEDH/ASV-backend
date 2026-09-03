@@ -43,7 +43,7 @@ final class UserApiController extends AbstractController
     #[Route('', methods: ['GET'])]
     public function index(UserRepository $repo, SerializerService $serializer): JsonResponse
     {
-        /** @var \App\Entity\User $me */
+        /** @var User $me */
         $me = $this->getUser();
 
         // Un client n'a pas de clinic_id (il passe par user_clinic ManyToMany) :
@@ -88,7 +88,7 @@ final class UserApiController extends AbstractController
     #[Route('/{id}', methods: ['GET'])]
     public function show(User $user, SerializerService $serializer): JsonResponse
     {
-        /** @var \App\Entity\User $me */
+        /** @var User $me */
         $me = $this->getUser();
 
         // Même raison que index() : getClinic() null pour un client → null === null dans memeClinic()
@@ -138,7 +138,7 @@ final class UserApiController extends AbstractController
     #[Route('', methods: ['POST'])]
     public function create(Request $request, EntityManagerInterface $em, SerializerService $serializer, UserRepository $repo): JsonResponse
     {
-        /** @var \App\Entity\User $me */
+        /** @var User $me */
         $me = $this->getUser();
 
         if ($me->getRole() !== RoleConstants::RESPONSABLE) {
@@ -219,7 +219,7 @@ final class UserApiController extends AbstractController
         $data = json_decode($request->getContent(), true);
 
         if (isset($data['role'])) {
-            /** @var \App\Entity\User $me */
+            /** @var User $me */
             $me = $this->getUser();
             if ($me->getRole() !== RoleConstants::RESPONSABLE) {
                 return $this->json(['error' => 'Seul un responsable peut modifier le rôle d\'un collaborateur.'], 403);
@@ -260,7 +260,7 @@ final class UserApiController extends AbstractController
     #[Route('/{id}', methods: ['DELETE'])]
     public function delete(User $user, EntityManagerInterface $em): JsonResponse
     {
-        /** @var \App\Entity\User $me */
+        /** @var User $me */
         $me = $this->getUser();
 
         if (!in_array($me->getRole(), RoleConstants::CAN_DELETE_USER, true)) {
