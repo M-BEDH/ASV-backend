@@ -47,6 +47,12 @@ jobs:
         # qui ne sont pas nécessaires pour faire tourner les tests PHPUnit
         run: composer install --no-scripts --no-interaction --prefer-dist --optimize-autoloader
 
+      # Génère var/cache/dev/App_KernelDevDebugContainer.xml, requis par l'extension
+      # Symfony de PHPStan (phpstan.dist.neon: symfony.containerXmlPath) — absent car
+      # --no-scripts saute la compilation du conteneur normalement faite après composer install
+      - name: Préchauffer le cache (dev) — nécessaire pour l'extension Symfony de PHPStan
+        run: php bin/console cache:warmup --env=dev
+
       # Analyse statique (niveau 5, extensions Symfony/Doctrine) — ne nécessite ni BDD ni clés JWT
       # --memory-limit évite un crash du worker parallèle (limite CLI par défaut trop basse, 128M)
       - name: Analyse statique PHPStan
