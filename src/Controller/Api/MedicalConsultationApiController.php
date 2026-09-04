@@ -202,6 +202,11 @@ final class MedicalConsultationApiController extends AbstractController
             }
             $consultation->setVeterinaire($vet);
         } else {
+            // Le créateur n'est assigné par défaut que s'il est lui-même vétérinaire (isVet() === true) —
+            // sinon (ex. assistant), un veterinaireId explicite est obligatoire.
+            if (!$me->isVet()) {
+                return $this->json(['error' => 'Un vétérinaire doit être sélectionné pour cette consultation.'], 400);
+            }
             $consultation->setVeterinaire($me);
         }
 

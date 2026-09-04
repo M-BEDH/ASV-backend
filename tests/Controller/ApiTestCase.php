@@ -64,6 +64,25 @@ abstract class ApiTestCase extends WebTestCase // base des tests avec ce qui est
         $user->setEmail($email);
         $user->setName("Dr Test{$clinicType}");
         $user->setRole('veterinaire');
+        $user->setIsVet(true);
+        $user->setPassword($hasher->hashPassword($user, $password));
+        $user->setClinic($clinic);
+        $this->em->persist($user);
+        $this->em->flush();
+
+        return $user;
+    }
+
+    // Crée un vétérinaire dans une clinique déjà existante (utile pour tester deux rôles d'une même clinique)
+    protected function createVetInClinic(Clinic $clinic, string $email = 'vet2@test.com', string $password = 'password'): User
+    {
+        $hasher = static::getContainer()->get(UserPasswordHasherInterface::class);
+
+        $user = new User();
+        $user->setEmail($email);
+        $user->setName('Dr Test Same Clinic');
+        $user->setRole('veterinaire');
+        $user->setIsVet(true);
         $user->setPassword($hasher->hashPassword($user, $password));
         $user->setClinic($clinic);
         $this->em->persist($user);

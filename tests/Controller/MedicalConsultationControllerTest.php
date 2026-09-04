@@ -90,11 +90,14 @@ final class MedicalConsultationControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(400);
     }
 
-    // L'assistant a les mêmes droits d'écriture que le vétérinaire sur les consultations (MedicalConsultationVoter::canWrite())
+    // L'assistant a les mêmes droits d'écriture que le vétérinaire sur les consultations, sans condition
+    // (MedicalConsultationVoter::canWrite()). Seule la désignation du praticien traitant à la création
+    // exige un choix explicite (isVet() === true) dans le menu déroulant, car l'assistant lui-même ne l'est pas.
     public function testCreateAsAssistantAllowed(): void
     {
         $assistant = $this->createAssistant();
         $token = $this->getToken($assistant->getEmail());
+        $vet = $this->createVetInClinic($assistant->getClinic());
 
         $animal = $this->request('POST', '/api/animals', ['nom' => 'Rex', 'espece' => 'Chien'], $token);
 
@@ -102,10 +105,30 @@ final class MedicalConsultationControllerTest extends ApiTestCase
             'animalId'         => $animal['id'],
             'dateConsultation' => '2025-03-16 10:00',
             'motif'            => 'Vaccin',
+            'veterinaireId'    => $vet->getId(),
         ], $token);
 
         self::assertResponseStatusCodeSame(201);
         self::assertSame('Vaccin', $data['motif']);
+        self::assertSame($vet->getId(), $data['veterinaire']['id']);
+    }
+
+    // Sans veterinaireId explicite, un créateur non vétérinaire (isVet() === false, ex. assistant) ne doit jamais
+    // être assigné par défaut comme praticien traitant — la requête est rejetée, un choix explicite est requis.
+    public function testCreateAsAssistantWithoutVeterinaireIdForbidden(): void
+    {
+        $assistant = $this->createAssistant();
+        $token = $this->getToken($assistant->getEmail());
+
+        $animal = $this->request('POST', '/api/animals', ['nom' => 'Rex', 'espece' => 'Chien'], $token);
+
+        $this->request('POST', '/api/consultations', [
+            'animalId'         => $animal['id'],
+            'dateConsultation' => '2025-03-16 10:00',
+            'motif'            => 'Vaccin',
+        ], $token);
+
+        self::assertResponseStatusCodeSame(400);
     }
 
     // Le client ne peut jamais créer de consultation
