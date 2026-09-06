@@ -59,7 +59,7 @@ final class UserApiController extends AbstractController
             ? $repo->findByClinic($clinic)
             : $repo->findBy(['clinic' => null]);
 
-        return $this->json(array_map(fn($u) => $serializer->serializeUser($u), $users));
+        return $this->json(array_map($serializer->serializeUser(...), $users));
     }
 
     #[OA\Get(

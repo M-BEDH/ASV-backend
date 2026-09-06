@@ -54,13 +54,13 @@ final class OwnerApiController extends AbstractController
 
         if ($me->getRole() === RoleConstants::CLIENT) {
             $owners = $repo->findBy(['user' => $me]);
-            return $this->json(array_map(fn($o) => $serializer->serializeOwner($o), $owners));
+            return $this->json(array_map($serializer->serializeOwner(...), $owners));
         }
 
         $clinic = $me->getClinic();
         $owners = $clinic ? $repo->findByClinic($clinic) : [];
 
-        return $this->json(array_map(fn($o) => $serializer->serializeOwner($o), $owners));
+        return $this->json(array_map($serializer->serializeOwner(...), $owners));
     }
 
     #[OA\Get(

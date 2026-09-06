@@ -63,7 +63,7 @@ final class AnimalApiController extends AbstractController
                 return $this->json([]);
             }
             $animals = $repo->findBy(['proprietaire' => $owner]);
-            return $this->json(array_map(fn($a) => $serializer->serializeAnimal($a), $animals));
+            return $this->json(array_map($serializer->serializeAnimal(...), $animals));
         }
 
         $clinic = $me->getClinic();
@@ -71,7 +71,7 @@ final class AnimalApiController extends AbstractController
             ? $repo->findByClinic($clinic)
             : $repo->findBy(['clinic' => null]);
 
-        return $this->json(array_map(fn($a) => $serializer->serializeAnimal($a), $animals));
+        return $this->json(array_map($serializer->serializeAnimal(...), $animals));
     }
 
     #[OA\Get(

@@ -3,7 +3,6 @@
 namespace App\Controller\Api;
 
 use App\Constant\RoleConstants;
-use App\Entity\Clinic;
 use App\Entity\User;
 use App\Repository\ClinicRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -41,7 +40,12 @@ final class ClinicApiController extends AbstractController
     {
         $clinics = $repo->findBy([], ['name' => 'ASC']);
 
-        return $this->json(array_map(fn(Clinic $c) => $serializer->serializeClinic($c), $clinics));
+        // syntaxe PHP 8.1+ first-class callable syntax
+        // prends la méthode serializeClinic de cet objet $serializer, 
+        // et la donne sous forme de fonction utilisable 
+        // sans avoir besoin d'écrire une fonction fléchée autour. Avant :  $this->json(array_map(fn(Clinic $c) => $serializer->serializeClinic($c), $clinics));
+        // array_map() reçoit directement cette référence à la méthode et l'appelle lui-même sur chaque $clinic
+        return $this->json(array_map($serializer->serializeClinic(...), $clinics));
     }
 
     // Public: trouve les cliniques où cet email est owner (pour l'inscription client)

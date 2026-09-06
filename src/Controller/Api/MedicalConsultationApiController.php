@@ -71,14 +71,14 @@ final class MedicalConsultationApiController extends AbstractController
             // Récupère toutes les consultations liées aux animaux de ces owners en une seule requête SQL
             $consultations = $repo->findByOwnersWithRelations($ownerIds);
 
-            return $this->json(array_map(fn($c) => $serializer->serializeConsultation($c), $consultations));
+            return $this->json(array_map($serializer->serializeConsultation(...), $consultations));
         }
 
         $clinic = $me->getClinic();
         if (!$clinic) return $this->json([]);
         $consultations = $repo->findByClinic($clinic);
 
-        return $this->json(array_map(fn($c) => $serializer->serializeConsultation($c), $consultations));
+        return $this->json(array_map($serializer->serializeConsultation(...), $consultations));
     }
 
     #[OA\Get(
