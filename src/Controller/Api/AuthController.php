@@ -83,7 +83,7 @@ final class AuthController extends AbstractController
                 $pendingUser->setPassword($hasher->hashPassword($pendingUser, $data['password']));
                 $this->prometheusRegistry
                     ->getOrRegisterCounter('asv', 'user_register_total', 'Nombre d\'inscriptions', ['role'])
-                    ->inc([$pendingUser->getRole()]);
+                    ->inc([$pendingUser->getRole()]); // ←  Prometheus
             }
             $em->flush();
 
@@ -230,7 +230,7 @@ final class AuthController extends AbstractController
         // Prometheus : incrémente le compteur de connexions réussies par rôle (affiché dans Grafana)
         $this->prometheusRegistry
             ->getOrRegisterCounter('asv', 'user_login_total', 'Nombre de connexions réussies', ['role'])
-            ->inc([$user->getRole()]);
+            ->inc([$user->getRole()]);  // ←  Prometheus
 
         return $this->json($serializer->serializeLoginSuccessResponse($user, $jwtManager->create($user)));
     }

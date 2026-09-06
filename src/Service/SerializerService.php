@@ -87,7 +87,7 @@ class SerializerService
         ];
     }
 
-    //Prometheus : sérialise les données d'un utilisateur pour l'enregistrement et l'affichage dans Grafana
+    // Réponse JSON de POST /api/auth/register (après activation du pré-compte)
     public function serializeRegisterResponseUser(User $u): array
     {
         return [
@@ -100,7 +100,7 @@ class SerializerService
         ];
     }
 
-    // Prometheus : sérialise les données d'un utilisateur pour la réponse de connexion et l'affichage dans Grafana
+    // Réponse JSON de GET /api/auth/me (et partie "user" de la réponse de login) — forme différente selon le rôle : client → clinicIds, staff → clinicId/clinicName/clinicType
     public function serializeLoginResponseUser(User $u): array
     {
         if ($u->getRole() === RoleConstants::CLIENT) {
@@ -126,7 +126,7 @@ class SerializerService
         ];
     }
 
-    // Prometheus : sérialise les données d'un utilisateur pour la réponse de connexion réussie et l'affichage dans Grafana
+    // Réponse JSON complète de POST /api/auth/login (token + utilisateur)
     public function serializeLoginSuccessResponse(User $u, string $token): array
     {
         return [
